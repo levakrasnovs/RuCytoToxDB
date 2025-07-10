@@ -74,7 +74,7 @@ ic50_class = df['IC50_class'].value_counts().reset_index()
 n_entries = df.shape[0]
 n_smiles = df.drop_duplicates(['SMILES_Ligands', 'Counterion']).shape[0]
 n_sources = df['DOI'].nunique()
-n_cell = df['Cell lines'].nunique()
+n_cell = df['Cell_line'].nunique()
 
 col1intro, col2intro, col3intro = st.columns([1, 1, 1])
 col1intro.markdown("""
