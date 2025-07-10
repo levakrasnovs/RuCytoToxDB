@@ -113,9 +113,9 @@ with tabs[0]:
     fig_year.update_layout(yaxis_title='Number of articles')
     fig_year.update_layout(xaxis_title='Publication year')
     fig_year.update_layout(xaxis_tickangle=45)
-    fig_year.update_xaxes(
-        tickvals=[0, 20, 40, 60, 80, 100],         
-        ticktext=["0", "20", "40", "60", "80", ">100"])
+    # fig_year.update_xaxes(
+    #     tickvals=[0, 20, 40, 60, 80, 100],         
+    #     ticktext=["0", "20", "40", "60", "80", ">100"])
     col2fig.plotly_chart(fig_year, use_container_width=True)
 
     fig_cell = px.bar(cells, x='Cell_line', y='count', text='count', title="Number of entries for 20 most popular cell lines")
