@@ -58,12 +58,14 @@ st.set_page_config(page_title='RuCytoToxDB', layout="wide")
 
 df = pd.read_csv('RuCytoToxDB.csv')
 df['IC50_Dark_value'] = df['IC50_Dark_value'].apply(scale_ic50)
+cells = df['Cell_line'].value_counts().reset_index().loc[:20]
+
 
 col1intro, col2intro = st.columns([1, 1])
 col1intro.markdown("""
 # RuCytoToxDB App v1.0
 
-The ”RuCytoToxDB App” is an ML-based service integrated with the experimental database to predict luminescence wavelength (**λlum**) and photoluminescence quantum yield (**PLQY**) of bis-cyclometalated iridium(III) complexes requiring only molecular formula of the ligands as a feature.
+The ”RuCytoToxDB App” is an ML-based service integrated with the experimental database to explore literature cytotoxicity data and predict cytotoxicity (IC50) of ruthenium complexes requiring only molecular formula of the ligands as a feature.
 
 ### There are currently two operation modes:
 * exploration of the database (**“explore”** window)
@@ -82,6 +84,11 @@ with tabs[0]:
     fig_ic50.update_layout(yaxis_title='Number of entries')
     fig_ic50.update_layout(xaxis_title='IC₅₀,μM')
     st.plotly_chart(fig_ic50)
+
+    fig_cell = px.bar(cells, x='Cell_line', y='count', text='count', title="Most popular cell lines by number of entries")
+    fig_cell.update_layout(yaxis_title='Number of entries')
+    fig_cell.update_layout(xaxis_title='Cell line')
+    st.plotly_chart(fig_cell, use_container_width=True)
 
 with tabs[1]:
 
