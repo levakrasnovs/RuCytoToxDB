@@ -82,13 +82,8 @@ col1intro.markdown(f"""
 
 The ”RuCytoToxDB App” is an ML-based service integrated with the experimental database to explore literature cytotoxicity data and predict cytotoxicity (IC50) of ruthenium complexes requiring only molecular formula of the ligands as a feature.
 
-### There are currently two operation modes:
-* exploration of the database (**“explore”** window)
-* prediction of **λlum** and **PLQY** (**“search and predict”** window)
-
 Download RuCytoToxDB: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15853577.svg)](https://doi.org/10.5281/zenodo.15853577)
                    
-
 """)
 
 col2intro.markdown(f"""# Overall stats: 
@@ -98,6 +93,10 @@ col2intro.markdown(f"""# Overall stats:
 * **{n_cell}** cell lines""")
 
 col3intro.image('TOC.png')
+
+st.markdown("""### There are currently two operation modes:
+* exploration of the database (**“explore”** window)
+* prediction of **λlum** and **PLQY** (**“search and predict”** window)""")
 
 tabs = st.tabs(["Explore", "Search and Predict", "Adcanced search"])
 
