@@ -14,6 +14,12 @@ def scale_ic50(ic50):
     else:
         return ic50
     
+def class_ic50(ic50):
+    if ic50 < 10:
+        return 1
+    else:
+        return 0
+    
 def hamming_distance(fp1, fp2):
     return np.sum(fp1 != fp2)
 
@@ -58,11 +64,19 @@ st.set_page_config(page_title='RuCytoToxDB', layout="wide")
 
 df = pd.read_csv('RuCytoToxDB.csv')
 df['IC50_Dark_value'] = df['IC50_Dark_value'].apply(scale_ic50)
+df['IC50_class'] = df['IC50_Dark_value'].apply(class_ic50)
 cells = df['Cell_line'].value_counts().reset_index().loc[:20]
 years = df['Year'].value_counts().reset_index()
 times = df.drop_duplicates(subset=['DOI'])['Time(h)'].value_counts().reset_index().loc[:5]
+ic50_class = df['IC50_class'].value_counts().reset_index()
 
-col1intro, col2intro = st.columns([1, 1])
+
+n_entries = df.shape[0]
+n_smiles = df.drop_duplicates(['SMILES_Ligands', 'Counterion']).shape[0]
+n_sources = df['DOI'].nunique()
+n_cell = df['Cell lines'].nunique()
+
+col1intro, col2intro, col3intro = st.columns([1, 1, 1])
 col1intro.markdown("""
 # RuCytoToxDB App v1.0
 
@@ -75,7 +89,15 @@ The ”RuCytoToxDB App” is an ML-based service integrated with the experimenta
 Download RuCytoToxDB: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15853577.svg)](https://doi.org/10.5281/zenodo.15853577)
 """)
 
-col2intro.image('TOC.png')
+col2intro.markdown(f"""
+# Overall stats:
+* **{n_entries}** number of entries
+* **{n_smiles}** unique ruthenium complexes
+* **{n_sources}** literature sources
+* **{n_solvents}** cell lines
+""")
+
+col3intro.image('TOC.png')
 
 tabs = st.tabs(["Explore", "Search and Predict", "Adcanced search"])
 
@@ -87,21 +109,26 @@ with tabs[0]:
     fig_ic50.update_layout(xaxis_title='IC₅₀,μM')
     col1fig.plotly_chart(fig_ic50)
 
-    fig_cell = px.bar(cells, x='Cell_line', y='count', text='count', title="Number of entries for 20 most popular cell lines")
-    fig_cell.update_layout(yaxis_title='Number of entries')
-    fig_cell.update_layout(xaxis_title='Cell line')
-    col2fig.plotly_chart(fig_cell, use_container_width=True)
-
     fig_year = px.bar(years, x='Year', y='count', text='count', title="Distribution of the years of the source articles")
     fig_year.update_layout(yaxis_title='Number of articles')
     fig_year.update_layout(xaxis_title='Publication year')
     fig_year.update_layout(xaxis_tickangle=45)
-    col1fig.plotly_chart(fig_year, use_container_width=True)
+    col2fig.plotly_chart(fig_year, use_container_width=True)
 
-    fig_time = px.bar(times, x='Cell_line', y='count', text='count', title="Distribution of complexes exposure time")
+    fig_cell = px.bar(cells, x='Cell_line', y='count', text='count', title="Number of entries for 20 most popular cell lines")
+    fig_cell.update_layout(yaxis_title='Number of entries')
+    fig_cell.update_layout(xaxis_title='Cell line')
+    st.plotly_chart(fig_cell, use_container_width=True)
+
+    fig_time = px.bar(times, x='Time(h)', y='count', text='count', title="Distribution of complexes exposure time")
     fig_time.update_layout(yaxis_title='Number of entries')
     fig_time.update_layout(xaxis_title='Exposure time (h)')
-    col2fig.plotly_chart(fig_time, use_container_width=True)
+    col1fig.plotly_chart(fig_time, use_container_width=True)
+
+    fig_class = px.bar(ic50_class, x='IC50_class', y='count', text='count', title="Distribution of IC50 values between two classes (toxic - <10 μM and non-toxic - ≥10 μM)")
+    fig_class.update_layout(yaxis_title='Number of entries')
+    fig_class.update_layout(xaxis_title='IC₅₀,μM')
+    col2fig.plotly_chart(fig_class, use_container_width=True)
 
 
 with tabs[1]:
