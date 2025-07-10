@@ -94,7 +94,7 @@ col2intro.markdown(f"""
 * **{n_entries}** number of entries
 * **{n_smiles}** unique ruthenium complexes
 * **{n_sources}** literature sources
-* **{n_solvents}** cell lines
+* **{n_cell}** cell lines
 """)
 
 col3intro.image('TOC.png')
