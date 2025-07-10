@@ -60,7 +60,7 @@ df = pd.read_csv('RuCytoToxDB.csv')
 df['IC50_Dark_value'] = df['IC50_Dark_value'].apply(scale_ic50)
 cells = df['Cell_line'].value_counts().reset_index().loc[:20]
 years = df['Year'].value_counts().reset_index()
-times = df['Time'].value_counts().reset_index().loc[:5]
+times = df['Time(h)'].value_counts().reset_index().loc[:5]
 
 col1intro, col2intro = st.columns([1, 1])
 col1intro.markdown("""
