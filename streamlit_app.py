@@ -59,7 +59,7 @@ st.set_page_config(page_title='RuCytoToxDB', layout="wide")
 df = pd.read_csv('RuCytoToxDB.csv')
 df['IC50_Dark_value'] = df['IC50_Dark_value'].apply(scale_ic50)
 
-col1intro, col2intro = st.columns([2, 1])
+col1intro, col2intro = st.columns([1, 1])
 col1intro.markdown("""
 # RuCytoToxDB App v1.0
 
@@ -81,7 +81,7 @@ with tabs[0]:
     fig_ic50 = px.histogram(df, x='IC50_Dark_value', nbins=64, title='Distribution of the IC₅₀ values')
     fig_ic50.update_layout(yaxis_title='Number of entries')
     fig_ic50.update_layout(xaxis_title='IC₅₀,μM')
-    st.plotly_chart(ic50)
+    st.plotly_chart(fig_ic50)
 
 with tabs[1]:
 
