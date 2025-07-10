@@ -59,7 +59,8 @@ st.set_page_config(page_title='RuCytoToxDB', layout="wide")
 df = pd.read_csv('RuCytoToxDB.csv')
 df['IC50_Dark_value'] = df['IC50_Dark_value'].apply(scale_ic50)
 cells = df['Cell_line'].value_counts().reset_index().loc[:20]
-
+years = df['Year'].value_counts().reset_index()
+times = df['Time'].value_counts().reset_index().loc[:5]
 
 col1intro, col2intro = st.columns([1, 1])
 col1intro.markdown("""
@@ -85,10 +86,22 @@ with tabs[0]:
     fig_ic50.update_layout(xaxis_title='IC₅₀,μM')
     st.plotly_chart(fig_ic50)
 
-    fig_cell = px.bar(cells, x='Cell_line', y='count', text='count', title="Most popular cell lines by number of entries")
+    fig_cell = px.bar(cells, x='Cell_line', y='count', text='count', title="Number of entries for 20 most popular cell lines")
     fig_cell.update_layout(yaxis_title='Number of entries')
     fig_cell.update_layout(xaxis_title='Cell line')
     st.plotly_chart(fig_cell, use_container_width=True)
+
+    fig_year = px.bar(years, x='Year', y='count', text='count', title="Distribution of the years of the source articles")
+    fig_year.update_layout(yaxis_title='Number of entries')
+    fig_year.update_layout(xaxis_title='Publication year')
+    fig_year.update_layout(xaxis_tickangle=45)
+    st.plotly_chart(fig_year, use_container_width=True)
+
+    fig_time = px.bar(cells, x='Cell_line', y='count', text='count', title="Distribution of complexes exposure time")
+    fig_time.update_layout(yaxis_title='Number of entries')
+    fig_time.update_layout(xaxis_title='Exposure time (h)')
+    st.plotly_chart(fig_time, use_container_width=True)
+
 
 with tabs[1]:
 
