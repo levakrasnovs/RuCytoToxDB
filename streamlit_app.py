@@ -66,10 +66,10 @@ df = pd.read_csv('RuCytoToxDB.csv')
 df['IC50_Dark_value'] = df['IC50_Dark_value'].apply(scale_ic50)
 df['IC50_class'] = df['IC50_Dark_value'].apply(class_ic50)
 cells = df['Cell_line'].value_counts().reset_index().loc[:20]
-years = df['Year'].value_counts().reset_index()
-times = df.drop_duplicates(subset=['DOI'])['Time(h)'].value_counts().reset_index().loc[:5]
+years = df.drop_duplicates(subset=['DOI'])['Year'].value_counts().reset_index()
+times = df['Time(h)'].value_counts().reset_index().loc[:5]
 ic50_class = df['IC50_class'].value_counts().reset_index()
-ic50_class['IC50_class'].replace({0: '≥10 μM', 1: '<10μM'})
+ic50_class['IC50_class'].replace({0: '≥10 μM', 1: '<10μM'}, inplace=True)
 
 n_entries = df.shape[0]
 n_smiles = df.drop_duplicates(['SMILES_Ligands', 'Counterion']).shape[0]
