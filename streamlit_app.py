@@ -91,7 +91,7 @@ Download RuCytoToxDB: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.158535
 
 """)
 
-col2intro.markdown( """# Overall stats: 
+col2intro.markdown(f"""# Overall stats: 
 * **{n_entries}** number of entries
 * **{n_smiles}** unique ruthenium complexes
 * **{n_sources}** literature sources
