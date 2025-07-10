@@ -77,7 +77,7 @@ n_sources = df['DOI'].nunique()
 n_cell = df['Cell_line'].nunique()
 
 col1intro, col2intro = st.columns([1, 1])
-col1intro.markdown("""
+col1intro.markdown(f"""
 # RuCytoToxDB App v1.0
 
 The ”RuCytoToxDB App” is an ML-based service integrated with the experimental database to explore literature cytotoxicity data and predict cytotoxicity (IC50) of ruthenium complexes requiring only molecular formula of the ligands as a feature.
