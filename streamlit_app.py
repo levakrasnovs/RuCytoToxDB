@@ -69,7 +69,7 @@ cells = df['Cell_line'].value_counts().reset_index().loc[:20]
 years = df['Year'].value_counts().reset_index()
 times = df.drop_duplicates(subset=['DOI'])['Time(h)'].value_counts().reset_index().loc[:5]
 ic50_class = df['IC50_class'].value_counts().reset_index()
-
+ic50_class['IC50_class'].replace({0: '≥10 μM', 1: '<10μM'})
 
 n_entries = df.shape[0]
 n_smiles = df.drop_duplicates(['SMILES_Ligands', 'Counterion']).shape[0]
@@ -117,9 +117,10 @@ with tabs[0]:
         tickvals=[i for i in range(df['Year'].min(),df['Year'].max()+1)])
     col2fig.plotly_chart(fig_year, use_container_width=True)
 
-    fig_cell = px.bar(cells, x='Cell_line', y='count', text='count', title="Number of entries for 20 most popular cell lines")
+    fig_cell = px.bar(cells, x='Cell_line', y='count', text='count', color='Cell_line', title="Number of entries for 20 most popular cell lines")
     fig_cell.update_layout(yaxis_title='Number of entries')
     fig_cell.update_layout(xaxis_title='Cell line')
+    fig_cell.update_layout(showlegend=False)
     st.plotly_chart(fig_cell, use_container_width=True)
 
     fig_time = px.bar(times, x='Time(h)', y='count', text='count', title="Distribution of complexes exposure time")
@@ -127,12 +128,9 @@ with tabs[0]:
     fig_time.update_layout(xaxis_title='Exposure time (h)')
     col1fig.plotly_chart(fig_time, use_container_width=True)
 
-    fig_class = px.bar(ic50_class, x='IC50_class', y='count', text='count', title="Distribution of IC50 values between two classes (toxic - <10μM and non-toxic - ≥10μM)")
+    fig_class = px.bar(ic50_class, x='IC50_class', y='count', text='count', title="Distribution of IC50 values between two classes (toxic: <10μM and non-toxic: ≥10μM)")
     fig_class.update_layout(yaxis_title='Number of entries')
     fig_class.update_layout(xaxis_title='IC₅₀,μM')
-    # fig_class.update_xaxes(
-    #     tickvals=[, 1],         
-    #     ticktext=["≥10 μM", "<10μM"])
     col2fig.plotly_chart(fig_class, use_container_width=True)
 
 
