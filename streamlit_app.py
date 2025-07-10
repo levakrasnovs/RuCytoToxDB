@@ -81,26 +81,27 @@ tabs = st.tabs(["Explore", "Search and Predict", "Adcanced search"])
 
 with tabs[0]:
 
+    col1fig, col2fig = st.columns([1, 1])
     fig_ic50 = px.histogram(df, x='IC50_Dark_value', nbins=32, title='Distribution of the IC₅₀ values')
     fig_ic50.update_layout(yaxis_title='Number of entries')
     fig_ic50.update_layout(xaxis_title='IC₅₀,μM')
-    st.plotly_chart(fig_ic50)
+    col1fig.plotly_chart(fig_ic50)
 
     fig_cell = px.bar(cells, x='Cell_line', y='count', text='count', title="Number of entries for 20 most popular cell lines")
     fig_cell.update_layout(yaxis_title='Number of entries')
     fig_cell.update_layout(xaxis_title='Cell line')
-    st.plotly_chart(fig_cell, use_container_width=True)
+    col2fig.plotly_chart(fig_cell, use_container_width=True)
 
     fig_year = px.bar(years, x='Year', y='count', text='count', title="Distribution of the years of the source articles")
-    fig_year.update_layout(yaxis_title='Number of entries')
+    fig_year.update_layout(yaxis_title='Number of articles')
     fig_year.update_layout(xaxis_title='Publication year')
     fig_year.update_layout(xaxis_tickangle=45)
-    st.plotly_chart(fig_year, use_container_width=True)
+    col1fig.plotly_chart(fig_year, use_container_width=True)
 
-    fig_time = px.bar(cells, x='Cell_line', y='count', text='count', title="Distribution of complexes exposure time")
+    fig_time = px.bar(times, x='Cell_line', y='count', text='count', title="Distribution of complexes exposure time")
     fig_time.update_layout(yaxis_title='Number of entries')
     fig_time.update_layout(xaxis_title='Exposure time (h)')
-    st.plotly_chart(fig_time, use_container_width=True)
+    col2fig.plotly_chart(fig_time, use_container_width=True)
 
 
 with tabs[1]:
