@@ -69,7 +69,7 @@ The ”RuCytoToxDB App” is an ML-based service integrated with the experimenta
 * exploration of the database (**“explore”** window)
 * prediction of **λlum** and **PLQY** (**“search and predict”** window)
 
-Download IrLumDB: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15853577.svg)](https://doi.org/10.5281/zenodo.15853577)
+Download RuCytoToxDB: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15853577.svg)](https://doi.org/10.5281/zenodo.15853577)
 """)
 
 col2intro.image('TOC.png')
@@ -78,7 +78,7 @@ tabs = st.tabs(["Explore", "Search and Predict", "Adcanced search"])
 
 with tabs[0]:
 
-    fig_ic50 = px.histogram(df, x='IC50_Dark_value', nbins=64, title='Distribution of the IC₅₀ values')
+    fig_ic50 = px.histogram(df, x='IC50_Dark_value', nbins=32, title='Distribution of the IC₅₀ values')
     fig_ic50.update_layout(yaxis_title='Number of entries')
     fig_ic50.update_layout(xaxis_title='IC₅₀,μM')
     st.plotly_chart(fig_ic50)
@@ -147,11 +147,6 @@ Usage notes:
             "SMILES L3",
             placeholder='CC(=O)/C=C(/C)[O-]',
             key='L3')
-
-    model_lum = XGBRegressor()
-    model_lum.load_model('xgboost_lum.json')
-    model_plqy = XGBRegressor()
-    model_plqy.load_model('xgboost_plqy.json')
 
     if st.button("Search in the database and predict properties"):
         if L1 and L2 and L3:
