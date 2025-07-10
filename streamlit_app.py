@@ -76,7 +76,7 @@ n_smiles = df.drop_duplicates(['SMILES_Ligands', 'Counterion']).shape[0]
 n_sources = df['DOI'].nunique()
 n_cell = df['Cell_line'].nunique()
 
-col1intro, col2intro, col3intro = st.columns([1, 1, 1])
+col1intro, col2intro, col3intro = st.columns([1, 1, 2])
 col1intro.markdown("""
 # RuCytoToxDB App v1.0
 
@@ -113,6 +113,9 @@ with tabs[0]:
     fig_year.update_layout(yaxis_title='Number of articles')
     fig_year.update_layout(xaxis_title='Publication year')
     fig_year.update_layout(xaxis_tickangle=45)
+    fig_year.update_xaxes(
+        tickvals=[0, 20, 40, 60, 80, 100],         
+        ticktext=["0", "20", "40", "60", "80", ">100"])
     col2fig.plotly_chart(fig_year, use_container_width=True)
 
     fig_cell = px.bar(cells, x='Cell_line', y='count', text='count', title="Number of entries for 20 most popular cell lines")
@@ -125,9 +128,12 @@ with tabs[0]:
     fig_time.update_layout(xaxis_title='Exposure time (h)')
     col1fig.plotly_chart(fig_time, use_container_width=True)
 
-    fig_class = px.bar(ic50_class, x='IC50_class', y='count', text='count', title="Distribution of IC50 values between two classes (toxic - <10 μM and non-toxic - ≥10 μM)")
+    fig_class = px.bar(ic50_class, x='IC50_class', y='count', text='count', title="Distribution of IC50 values between two classes (toxic - <10μM and non-toxic - ≥10μM)")
     fig_class.update_layout(yaxis_title='Number of entries')
     fig_class.update_layout(xaxis_title='IC₅₀,μM')
+    fig_class.update_xaxes(
+        tickvals=[0, 1],         
+        ticktext=["≥10 μM", "<10μM"])
     col2fig.plotly_chart(fig_class, use_container_width=True)
 
 
