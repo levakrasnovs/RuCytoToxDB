@@ -76,7 +76,7 @@ n_smiles = df.drop_duplicates(['SMILES_Ligands', 'Counterion']).shape[0]
 n_sources = df['DOI'].nunique()
 n_cell = df['Cell_line'].nunique()
 
-col1intro, col2intro, col3intro = st.columns([1, 1, 2])
+col1intro, col2intro = st.columns([1, 1])
 col1intro.markdown("""
 # RuCytoToxDB App v1.0
 
@@ -87,9 +87,7 @@ The ”RuCytoToxDB App” is an ML-based service integrated with the experimenta
 * prediction of **λlum** and **PLQY** (**“search and predict”** window)
 
 Download RuCytoToxDB: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15853577.svg)](https://doi.org/10.5281/zenodo.15853577)
-""")
-
-col2intro.markdown(f"""
+                   
 # Overall stats:
 * **{n_entries}** number of entries
 * **{n_smiles}** unique ruthenium complexes
@@ -97,7 +95,7 @@ col2intro.markdown(f"""
 * **{n_cell}** cell lines
 """)
 
-col3intro.image('TOC.png')
+col2intro.image('TOC.png')
 
 tabs = st.tabs(["Explore", "Search and Predict", "Adcanced search"])
 
