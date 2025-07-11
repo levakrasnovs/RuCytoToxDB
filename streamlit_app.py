@@ -256,17 +256,22 @@ with tabs[1]:
         #         st.error("Please enter all three ligands")
 
 with tabs[2]:
-    col1select, col2select = st.columns([1, 1])
+    col1select, col2select, col3select = st.columns([1, 1, 1])
     line_list = df['Cell_line'].value_counts().nlargest(50).index.tolist()
     time_list = df['Time(h)'].value_counts().nlargest(5).index.tolist()
     selected_line = col1select.selectbox(label='Choose line', options=line_list, index=None, placeholder='A549')
-    selected_time = col2select.selectbox(label='Choose exposure time (h)', options=['All time ranges'] + time_list, index=0, placeholder='72')
+    selected_time = col2select.selectbox(label='Choose exposure time (h)', options=['All time ranges'] + time_list, index=0)
+    select_sorting = col3select.selectbox(label='Choose the sorting type', options=['Most cytooxic above', 'Least cytooxic above'], index=0)
 
     if selected_line:
         if selected_time == 'All time ranges':
-            search_df = df[(df['Cell_line'] == selected_line)].sort_values(by='IC50_Dark_value')
+            search_df = df[(df['Cell_line'] == selected_line)]
         else:
-            search_df = df[(df['Cell_line'] == selected_line) & (df['Time(h)'] == selected_time)].sort_values(by='IC50_Dark_value')
+            search_df = df[(df['Cell_line'] == selected_line) & (df['Time(h)'] == selected_time)]
+        if select_sorting == 'Least cytooxic above':
+            search_df.sort_values(by='IC50_Dark_value', ascending=False, inplace=True)
+        else:
+            search_df.sort_values(by='IC50_Dark_value', ascending=True, inplace=True)
         num_compexes = search_df.drop_duplicates(subset=['SMILES_Ligands', 'Counterion']).shape[0]
         st.markdown(f'# Found {num_compexes} complexes')
         col1search, col2search, col3search, col4search, col5search, col6search, col7search = st.columns([1, 1, 1, 1, 1, 1, 1])
