@@ -95,10 +95,10 @@ col2intro.markdown(f"""# Overall stats:
 col3intro.image('TOC.png')
 
 st.markdown("""### There are currently two operation modes:
-* exploration of the database (**“explore”** window)
+* exploration of the database (**“Explore statistics”** window)
 * prediction of **IC₅₀** (**“search and predict”** window)""")
 
-tabs = st.tabs(["Explore", "Search and Predict", "Advanced search"])
+tabs = st.tabs(["Explore statistics", "Search and Predict", "Advanced search"])
 
 with tabs[0]:
 
@@ -137,10 +137,8 @@ with tabs[0]:
 
 with tabs[1]:
 
-    st.markdown("""Please enter SMILES of the ligands (or draw the structural formula in the corresponding window) and press “**Search in the database and predict properties**” button to perform the prediction. If the complex exists in the database, experimental data will be displayed. If the complex does not exist in the database, the predicted **IC₅₀** will appear.
-
-    # To get SMILES of your ligand, draw custom molecule and click **"Apply"** button or copy SMILES from popular ligands:""")
-
+    st.markdown("""Please enter SMILES of the ligands (or draw the structural formula in the corresponding window) and press “**Search in the database and predict properties**” button to perform the prediction. If the complex exists in the database, experimental data will be displayed. If the complex does not exist in the database, the predicted **IC₅₀** will appear.""")
+    st.markdown("""### To get SMILES of your ligand, draw custom molecule and click **"Apply"** button or copy SMILES from popular ligands:""")
     exp = st.expander("Popular ligands")
     exp1col, exp2col, exp3col = exp.columns(3)
     with exp:
