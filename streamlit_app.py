@@ -65,9 +65,9 @@ st.set_page_config(page_title='RuCytoToxDB', layout="wide")
 df = pd.read_csv('RuCytoToxDB.csv')
 df['IC50_Dark_value'] = df['IC50_Dark_value'].apply(scale_ic50)
 df['IC50_class'] = df['IC50_Dark_value'].apply(class_ic50)
-cells = df['Cell_line'].value_counts().reset_index().loc[:20]
+cells = df['Cell_line'].value_counts().reset_index().loc[:19]
 years = df.drop_duplicates(subset=['DOI'])['Year'].value_counts().reset_index()
-times = df['Time(h)'].value_counts().reset_index().loc[:5]
+times = df['Time(h)'].value_counts().reset_index().loc[:4]
 ic50_class = df['IC50_class'].value_counts().reset_index()
 ic50_class['IC50_class'].replace({0: '≥10 μM', 1: '<10μM'}, inplace=True)
 
@@ -96,7 +96,7 @@ col3intro.image('TOC.png')
 
 st.markdown("""### There are currently two operation modes:
 * exploration of the database (**“explore”** window)
-* prediction of **λlum** and **PLQY** (**“search and predict”** window)""")
+* prediction of **IC₅₀** (**“search and predict”** window)""")
 
 tabs = st.tabs(["Explore", "Search and Predict", "Adcanced search"])
 
@@ -125,6 +125,8 @@ with tabs[0]:
     fig_time = px.bar(times, x='Time(h)', y='count', text='count', title="Distribution of complexes exposure time")
     fig_time.update_layout(yaxis_title='Number of entries')
     fig_time.update_layout(xaxis_title='Exposure time (h)')
+    fig_time.update_xaxes(
+            tickvals=[24, 48, 72, 96, 144])
     col1fig.plotly_chart(fig_time, use_container_width=True)
 
     fig_class = px.bar(ic50_class, x='IC50_class', y='count', text='count', title="Distribution of IC50 values between two classes (toxic: <10μM and non-toxic: ≥10μM)")
@@ -135,46 +137,30 @@ with tabs[0]:
 
 with tabs[1]:
 
-    st.markdown("""Please enter SMILES of the ligands (or draw the structural formula in the corresponding window) and press “**Search in the database and predict properties**” button to perform the prediction. If the complex exists in the database, experimental data will be displayed. If the complex does not exist in the database, the predicted **λlum** and **PLQY** will appear.
-
-Usage notes:
-* The desired complexes usually contain two cyclometalated ligands and one ancillary ligand; thus L1 and L2 should correspond to the cyclometalated ligands and L3 should correspond to the ancillary ligand.
-* Some ligands make formally covalent bonds with the Ir(III) ion. For these a negatively charged bond-forming atom should be drawn in the SMILES of corresponding ligand.
-* The ML model uses only spectroscopic data obtained in **dichloromethane solvent**, thus the predicted **λlum** and **PLQY** is aimed to be also in dichloromethane solution of the corresponding complex.
+    st.markdown("""Please enter SMILES of the ligands (or draw the structural formula in the corresponding window) and press “**Search in the database and predict properties**” button to perform the prediction. If the complex exists in the database, experimental data will be displayed. If the complex does not exist in the database, the predicted **IC₅₀** will appear.
 
     ### To get SMILES of your ligand, draw custom molecule and click **"Apply"** button or copy SMILES from popular ligands:""")
 
     exp = st.expander("Popular ligands")
     exp1col, exp2col, exp3col = exp.columns(3)
     with exp:
-        exp1col.markdown('### ppy(-)')
-        exp1col.image(draw_molecule('[c-]1ccccc1-c1ccccn1'), caption="""[c-]1ccccc1-c1ccccn1""")
-        exp2col.markdown('### dfppy(-)')
-        exp2col.image(draw_molecule('Fc1c[c-]c(-c2ccccn2)c(F)c1'), caption='Fc1c[c-]c(-c2ccccn2)c(F)c1')
-        exp3col.markdown('### piq(-)')
-        exp3col.image(draw_molecule('[c-]1ccccc1-c1nccc2ccccc12'), caption='[c-]1ccccc1-c1nccc2ccccc12')
-        exp1col.markdown('### bzq(-)')
-        exp1col.image(draw_molecule('[c-]1cccc2ccc3cccnc3c12'), caption='[c-]1cccc2ccc3cccnc3c12')
+        exp1col.markdown('### p-cymene')
+        exp1col.image(draw_molecule('Cc1ccc(C(C)C)cc1'), caption='Cc1ccc(C(C)C)cc1')
         exp2col.markdown('### bpy')
         exp2col.image(draw_molecule('c1ccc(-c2ccccn2)nc1'), caption='c1ccc(-c2ccccn2)nc1')
         exp3col.markdown('### phen')
         exp3col.image(draw_molecule('c1cnc2c(c1)ccc1cccnc12'), caption='c1cnc2c(c1)ccc1cccnc12')
-        exp1col.markdown('### pq(-)')
-        exp1col.image(draw_molecule('[c-]1ccccc1-c1ccc2ccccc2n1'), caption='[c-]1ccccc1-c1ccc2ccccc2n1')
         exp2col.markdown('### bphen')
         exp2col.image(draw_molecule('c1ccc(-c2ccnc3c2ccc2c(-c4ccccc4)ccnc23)cc1'), caption='c1ccc(-c2ccnc3c2ccc2c(-c4ccccc4)ccnc23)cc1')
-        exp3col.markdown('### dppz')
-        exp3col.image(draw_molecule('c1ccc2nc3c4cccnc4c4ncccc4c3nc2c1'), caption='c1ccc2nc3c4cccnc4c4ncccc4c3nc2c1')
-        exp1col.markdown('### acac(-)')
-        exp1col.image(draw_molecule('CC(=O)/C=C(/C)[O-]'), caption='CC(=O)/C=C(/C)[O-]')
-        exp2col.markdown('### picolinate')
-        exp2col.image(draw_molecule('O=C([O-])c1ccccn1'), caption='O=C([O-])c1ccccn1')
-        exp3col.markdown('### tmd(-)')
-        exp3col.image(draw_molecule('O=C(/C=C([O-])/C(C)(C)C)C(C)(C)C'), caption='O=C(/C=C([O-])/C(C)(C)C)C(C)(C)C')
-        exp1col.markdown('### dmbpy')
-        exp1col.image(draw_molecule('Cc1ccnc(-c2cc(C)ccn2)c1'), caption='Cc1ccnc(-c2cc(C)ccn2)c1')
-        exp2col.markdown('### diMeNHC')
-        exp2col.image(draw_molecule('Cn1[c-][n+](C[n+]2[c-]n(C)cc2)cc1'), caption='Cn1[c-][n+](C[n+]2[c-]n(C)cc2)cc1')
+        exp3col.markdown('### PPh3')
+        exp3col.image(draw_molecule('P(c1ccccc1)(c1ccccc1)c1ccccc1'), caption='P(c1ccccc1)(c1ccccc1)c1ccccc1')
+        exp1col.markdown('### [Cl-]')
+        exp1col.image(draw_molecule('[Cl-]'), caption='[Cl-]')
+        exp2col.markdown('### PTA')
+        exp2col.image(draw_molecule('C1N2CN3CN1CP(C2)C3'), caption='C1N2CN3CN1CP(C2)C3')
+        exp3col.markdown('### dppb')
+        exp3col.image(draw_molecule('c1ccc(P(CCCCP(c2ccccc2)c2ccccc2)c2ccccc2)cc1'), caption='c1ccc(P(CCCCP(c2ccccc2)c2ccccc2)c2ccccc2)cc1')
+
 
     smile_code = st_ketcher(height=400)
     st.markdown(f"""### Your SMILES:""")
