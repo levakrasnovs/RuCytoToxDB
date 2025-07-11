@@ -98,7 +98,7 @@ st.markdown("""### There are currently two operation modes:
 * exploration of the database (**“explore”** window)
 * prediction of **IC₅₀** (**“search and predict”** window)""")
 
-tabs = st.tabs(["Explore", "Search and Predict", "Adcanced search"])
+tabs = st.tabs(["Explore", "Search and Predict", "Advanced search"])
 
 with tabs[0]:
 
@@ -180,7 +180,7 @@ with tabs[1]:
 
         smiles_complex = '.'.join(smiles_inputs)
 
-        if st.button("Search in the database and predict properties"):
+        if st.button("Search in the database and predict IC50"):
             mol = Chem.MolFromSmiles(smiles_complex)
             if (mol is not None):
                 canonize_smiles = Chem.MolToSmiles(mol)
@@ -256,59 +256,37 @@ with tabs[1]:
         #         st.error("Please enter all three ligands")
 
 with tabs[2]:
-    min_value = 400
-    max_value = 810
-    initial_value = (500, 600)
+    col1select, col2select = st.columns([1, 1])
+    line_list = df['Cell_line'].value_counts().nlargest(50).index.tolist()
+    time_list = df['Time(h)'].value_counts().nlargest(5).index.tolist()
+    selected_line = col1select.selectbox(label='Choose line', options=line_list, index=None, placeholder='A549')
+    selected_time = col2select.selectbox(label='Choose exposure time (h)', options=['All time ranges'] + time_list, index=0, placeholder='72')
 
-    slider_value = st.slider(
-        label="λlum,nm",
-        min_value=min_value,
-        max_value=max_value,
-        value=initial_value
-    )
-
-    sort_param = st.radio(
-        "Sort data by:",
-        ["PLQY", "λlum,nm"])
-
-    if st.button("Set predicted wavelength range"):
-        if sort_param == "PLQY":
-            range_df = df_pred[(df_pred['pred_lum'] <= slider_value[1]) & (df_pred['pred_lum'] >= slider_value[0])].sort_values(by='pred_PLQY', ascending=False)
+    if selected_line:
+        if selected_time == 'All time ranges':
+            search_df = df[(df['Cell_line'] == selected_line)].sort_values(by='IC50_Dark_value')
         else:
-            range_df = df_pred[(df_pred['pred_lum'] <= slider_value[1]) & (df_pred['pred_lum'] >= slider_value[0])].sort_values(by='pred_lum', ascending=False)
-        range_df = range_df[:500]
-        num = str(range_df.shape[0])
-        st.success(f"Selected range: {slider_value}. Found {num} entries:")
-        col1range, col2range, col3range, col4range, col5range, col6range = st.columns([1, 1, 2, 2, 2, 2])
-        col1range.markdown(f'**PLQY**')
-        col2range.markdown(f'**λlum,nm**')
-        col3range.markdown(f'**PubChem**')
-        col4range.markdown(f'**L1**')
-        col5range.markdown(f'**L2**')
-        col6range.markdown(f'**L3**')
+            search_df = df[(df['Cell_line'] == selected_line) & (df['Time(h)'] == selected_time)].sort_values(by='IC50_Dark_value')
+        num_compexes = search_df.drop_duplicates(subset=['SMILES_Ligands', 'Counterion']).shape[0]
+        st.markdown(f'# Found {num_compexes} complexes')
+        col1search, col2search, col3search, col4search, col5search, col6search, col7search = st.columns([1, 1, 1, 1, 1, 1, 1])
+        col1search.markdown(f'**Ligands of Ru complexes**')
+        col2search.markdown(f'**IC₅₀,μM**')
+        col3search.markdown(f'**Сell line**')
+        col4search.markdown(f'**Time(h)**')
+        col5search.markdown(f'**Abbreviation in the source:**')
+        col6search.markdown(f'**Source**')
+        col7search.markdown(f'**Cisplatin**')
 
-        for plqy, lam, cid, L1, in zip(range_df['pred_PLQY'],
-                                       range_df['pred_lum'],
-                                       range_df['CID'],
-                                       range_df['SMILES_charge']):
-
-            col1, col2, col3, col4, col5, col6, = st.columns([1, 1, 2, 2, 2, 2])
-            plqy = plqy*100
-            col1.markdown(f'**{plqy}%**')
-            col2.markdown(f'**{lam}nm**')
-            col3.markdown(f'**https://pubchem.ncbi.nlm.nih.gov/compound/{cid}**')
-            col4.image(draw_molecule(L1), caption=L1)
-            col5.image(draw_molecule(L1), caption=L1)
-            col6.image(draw_molecule('CC(=O)/C=C(/C)[O-]'), caption='CC(=O)/C=C(/C)[O-]')
-
-    inchi = st.text_input(
-            "InChI",
-            placeholder='InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3',
-            key='InChI')
-    if inchi:
-        if Chem.MolFromInchi(inchi) is not None:
-            smile_code = Chem.MolToSmiles(Chem.MolFromInchi(inchi))
-            st.markdown(f"``{smile_code}``")
-            st.image(draw_molecule(smile_code), caption=smile_code)
-        else:
-            st.markdown(f"**Неверный InChI**")
+        for smi, ic50, cell_line, time, doi, abbr, cis in zip(search_df['SMILES_Ligands'], search_df['IC50_Dark(M*10^-6)'], search_df['Cell_line'], search_df['Time(h)'], search_df['DOI'], search_df['Abbreviation_in_the_article'], search_df['IC50_Cisplatin(M*10^-6)']):
+            col1result, col2result, col3result, col4result, col5result, col6result, col7result = st.columns([1, 1, 1, 1, 1, 1, 1])
+            col1result.image(draw_molecule(smi), caption=smi, use_column_width=True)
+            col2result.markdown(f'**{ic50}**')
+            col3result.markdown(f'**{cell_line}**')
+            col4result.markdown(f'**{time}**')
+            col5result.markdown(f'**{abbr}**')
+            col6result.markdown(f'**https://doi.org/{doi}**')
+            if not pd.isna(cis):
+                col7result.markdown(f'**{cis}**')
+            else:
+                col7result.markdown(f'**No data**')
