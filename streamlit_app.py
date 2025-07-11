@@ -163,11 +163,15 @@ with tabs[1]:
     st.markdown(f"""### Your SMILES:""")
     st.markdown(f"``{smile_code}``")
 
+    st.markdown(f"""### 1) Select number of ligands:""")
+
     num_ligands = st.selectbox(
         "Select number of ligands in your complex:",
         options=[2, 3, 4, 5, 6],
         index=1
     )
+
+    st.markdown("""### 2) Paste this SMILES into the corresponding boxes below:""")
 
     if num_ligands:
         smiles_inputs = []
@@ -319,11 +323,15 @@ with tabs[3]:
     st.markdown(f"""### Your SMILES:""")
     st.markdown(f"``{smile_code}``")
 
+    st.markdown(f"""### 1) Select number of ligands:""")
+
     num_ligands = st.selectbox(
         "Select number of ligands in your substructure search query:",
         options=[1, 2, 3],
-        index=1
+        index=0
     )
+
+    st.markdown("""### 2) Paste this SMILES into the corresponding boxes below:""")
 
     if num_ligands:
         smiles_inputs = []
@@ -337,12 +345,12 @@ with tabs[3]:
             mol = Chem.MolFromSmiles(smiles_complex)
             if (mol is not None):
                 smiles_inputs = [canonize_smiles(smi) for smi in smiles_inputs]
-                search_df = df[(df['SMILES_Ligands'].apply(lambda x: all([smi in x.split('.') for smi in smiles_inputs])))].sort_values(by='IC50_Dark_value')
+                search_df = df[(df['SMILES_Ligands'].apply(lambda x: all([smi in x.split('.') for smi in smiles_inputs])))].sort_values(by='SMILES_Ligands')
                 if search_df.shape[0] == 0:
                     st.markdown('Nothing found')
                 else:
                     num_compexes = search_df.drop_duplicates(subset=['SMILES_Ligands', 'Counterion']).shape[0]
-                    st.markdown(f'# Found {num_compexes}')
+                    st.markdown(f'# Found {num_compexes} complexes')
                     col1search, col2search, col3search, col4search, col5search, col6search, col7search = st.columns([1, 1, 1, 1, 1, 1, 1])
                     col1search.markdown(f'**Ligands of Ru complexes**')
                     col2search.markdown(f'**IC₅₀,μM**')
