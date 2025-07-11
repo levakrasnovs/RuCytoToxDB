@@ -67,7 +67,7 @@ df['IC50_Dark_value'] = df['IC50_Dark_value'].apply(scale_ic50)
 df['IC50_class'] = df['IC50_Dark_value'].apply(class_ic50)
 cells = df['Cell_line'].value_counts().reset_index().loc[:19]
 years = df.drop_duplicates(subset=['DOI'])['Year'].value_counts().reset_index()
-times = df['Time(h)'].value_counts().reset_index().loc[:4]
+times = df['Time(h)'].value_counts().reset_index().loc[:5]
 ic50_class = df['IC50_class'].value_counts().reset_index()
 ic50_class['IC50_class'].replace({0: '≥10 μM', 1: '<10μM'}, inplace=True)
 
@@ -126,7 +126,7 @@ with tabs[0]:
     fig_time.update_layout(yaxis_title='Number of entries')
     fig_time.update_layout(xaxis_title='Exposure time (h)')
     fig_time.update_xaxes(
-            tickvals=[24, 48, 72, 96, 144])
+            tickvals=[24, 48, 72, 96, 120, 144])
     col1fig.plotly_chart(fig_time, use_container_width=True)
 
     fig_class = px.bar(ic50_class, x='IC50_class', y='count', text='count', title="Distribution of IC50 values between two classes (toxic: <10μM and non-toxic: ≥10μM)")
@@ -139,7 +139,7 @@ with tabs[1]:
 
     st.markdown("""Please enter SMILES of the ligands (or draw the structural formula in the corresponding window) and press “**Search in the database and predict properties**” button to perform the prediction. If the complex exists in the database, experimental data will be displayed. If the complex does not exist in the database, the predicted **IC₅₀** will appear.
 
-    ### To get SMILES of your ligand, draw custom molecule and click **"Apply"** button or copy SMILES from popular ligands:""")
+    # To get SMILES of your ligand, draw custom molecule and click **"Apply"** button or copy SMILES from popular ligands:""")
 
     exp = st.expander("Popular ligands")
     exp1col, exp2col, exp3col = exp.columns(3)
@@ -167,104 +167,100 @@ with tabs[1]:
     st.markdown(f"``{smile_code}``")
     st.markdown(f"""### Copy and paste this SMILES into the corresponding box below:""")
 
-    col1, col2, col3 = st.columns(3)
+    num_ligands = st.text_input(
+            "Number of Ligands",
+            placeholder='3',
+            key='num_ligands')
+    
+    if num_ligands:
+        smiles_inputs = []
+        for num in num_ligands:
+            smiles = st.text_input(f"SMILES L{num+1}")
+            smiles_inputs.append(smiles)
+        smiles_complex = '.'.join(smiles_inputs)
+        st.markdown(smiles_complex)
 
-    L1 = col1.text_input(
-            "SMILES L1",
-            placeholder='Cc1cc2nc(-c3[c-]cccc3)n(Cc3ccccc3)c2cc1C',
-            key='L1')
+        # if st.button("Search in the database and predict properties"):
+        #     if L1 and L2 and L3:
+        #         mol1 = Chem.MolFromSmiles(L1.strip())
+        #         mol2 = Chem.MolFromSmiles(L2.strip())
+        #         mol3 = Chem.MolFromSmiles(L3.strip())
+        #         if (mol1 is not None) & (mol2 is not None) & (mol3 is not None):
+        #             if check_ligands(mol1, mol2, mol3):
+        #                 canonize_l1 = Chem.MolToSmiles(mol1)
+        #                 canonize_l2 = Chem.MolToSmiles(mol2)
+        #                 canonize_l3 = Chem.MolToSmiles(mol3)
+        #                 col1.image(draw_molecule(L1), caption=L1)
+        #                 col2.image(draw_molecule(L2), caption=L2)
+        #                 col3.image(draw_molecule(L3), caption=L3)
+        #                 search_df = df[(df['L1'] == canonize_l1) & (df['L2'] == canonize_l2) & (df['L3'] == canonize_l3)]
+        #                 if search_df.shape[0] == 0:
+        #                     L1_res_ecfp = calc(mol1)
+        #                     L2_res_ecfp = calc(mol2)
+        #                     L3_res_ecfp = calc(mol3)
+        #                     L_res = L1_res_ecfp + L2_res_ecfp + L3_res_ecfp
+        #                     L_res = L_res.reshape(1, -1)
+        #                     pred_lum = str(int(round(model_lum.predict(L_res)[0], 0)))
+        #                     pred_plqy = round(model_plqy.predict(L_res)[0]*100, 1)
+        #                     str_plqy = str(pred_plqy)
+        #                     predcol1, predcol2 = st.columns(2)
+        #                     predcol1.markdown(f'## Predicted luminescence wavelength:')
+        #                     predcol2.markdown(f'## Predicted PLQY:')
+        #                     predcol1.markdown(f'### {pred_lum} nm in dichloromethane')
+        #                     predcol2.markdown(f'### {str_plqy}% in dichloromethane')
+        #                     if pred_plqy <= 10:
+        #                         predcol2.image('low_qy.png', width=200)
+        #                         predcol2.markdown(f'### Low PLQY (0-10%)')
+        #                     elif 50 >= pred_plqy > 10:
+        #                         predcol2.image('moderate_qy.png', width=200)
+        #                         predcol2.markdown(f'### Moderate PLQY (10-50%)')
+        #                     else:
+        #                         predcol2.image('high_qy.png', width=200)
+        #                         predcol2.markdown(f'### High PLQY (50-100%)')
+        #                     df['res_dist'] = df['L1_ecfp'].apply(lambda ecfp1: hamming_distance(L1_res_ecfp, ecfp1)) + df['L1_ecfp'].apply(lambda ecfp2: hamming_distance(L2_res_ecfp, ecfp2)) + df['L3_ecfp'].apply(lambda ecfp3: hamming_distance(L3_res_ecfp, ecfp3))
+        #                     search_df = df[df['res_dist'] == df['res_dist'].min()]
 
-    L2 = col2.text_input(
-            "SMILES L2",
-            placeholder='Cc1cc2nc(-c3[c-]cccc3)n(Cc3ccccc3)c2cc1C',
-            key='L2')
+        #                     st.markdown(f'### Below are shown the most similar complexes found in the IrLumDB:')
+        #                     col1search, col2search, col3search, col4search, col5search, col6search, col7search, col8search = st.columns([1, 1, 1, 1, 1, 2, 2, 2])
+        #                     col1search.markdown(f'**λlum,nm**')
+        #                     col2search.markdown(f'**PLQY**')
+        #                     col3search.markdown(f'**Solvent**')
+        #                     col4search.markdown(f'**Abbreviation**')
+        #                     col5search.markdown(f'**Source**')
+        #                     col6search.markdown(f'**L1**')
+        #                     col7search.markdown(f'**L2**')
+        #                     col8search.markdown(f'**L3**')
+        #                     for lam, qy, solvent, doi, abbr, L1_df, L2_df, L3_df in zip(search_df['Max_wavelength(nm)'], search_df['PLQY'], search_df['Solvent'], search_df['DOI'], search_df['Abbreviation_in_the_article'], search_df['L1'], search_df['L2'], search_df['L3']):
+        #                         col1result, col2result, col3result, col4result, col5result, col6result, col7result, col8result = st.columns([1, 1, 1, 1, 1, 2, 2, 2])
+        #                         col1result.markdown(f'**{lam} nm**')
+        #                         col2result.markdown(f'**{qy}**')
+        #                         col3result.markdown(f'**{solvent}**')
+        #                         col4result.markdown(f'**{abbr}**')
+        #                         col5result.markdown(f'**https://doi.org/{doi}**')
+        #                         col6result.image(draw_molecule(L1_df), caption=L1_df)
+        #                         col7result.image(draw_molecule(L2_df), caption=L2_df)
+        #                         col8result.image(draw_molecule(L3_df), caption=L3_df)
+        #                 else:
+        #                     st.markdown(f'### Found this complex in IrLumDB:')
+        #                     col1search, col2search, col3search, col4search, col5search = st.columns([1, 1, 1, 3, 4])
+        #                     col1search.markdown(f'**λlum,nm**')
+        #                     col2search.markdown(f'**PLQY**')
+        #                     col3search.markdown(f'**Solvent:**')
+        #                     col4search.markdown(f'**Abbreviation in the source:**')
+        #                     col5search.markdown(f'**Source**')
 
-    L3 = col3.text_input(
-            "SMILES L3",
-            placeholder='CC(=O)/C=C(/C)[O-]',
-            key='L3')
+        #                     for lam, qy, solvent, doi, abbr in zip(search_df['Max_wavelength(nm)'], search_df['PLQY'], search_df['Solvent'], search_df['DOI'], search_df['Abbreviation_in_the_article']):
+        #                         col1result, col2result, col3result, col4result, col5result = st.columns([1, 1, 1, 3, 4])
+        #                         col1result.markdown(f'**{lam} nm**')
+        #                         col2result.markdown(f'**{qy}**')
+        #                         col3result.markdown(f'**{solvent}**')
+        #                         col4result.markdown(f'**{abbr}**')
+        #                         col5result.markdown(f'**https://doi.org/{doi}**')
 
-    if st.button("Search in the database and predict properties"):
-        if L1 and L2 and L3:
-            mol1 = Chem.MolFromSmiles(L1.strip())
-            mol2 = Chem.MolFromSmiles(L2.strip())
-            mol3 = Chem.MolFromSmiles(L3.strip())
-            if (mol1 is not None) & (mol2 is not None) & (mol3 is not None):
-                if check_ligands(mol1, mol2, mol3):
-                    canonize_l1 = Chem.MolToSmiles(mol1)
-                    canonize_l2 = Chem.MolToSmiles(mol2)
-                    canonize_l3 = Chem.MolToSmiles(mol3)
-                    col1.image(draw_molecule(L1), caption=L1)
-                    col2.image(draw_molecule(L2), caption=L2)
-                    col3.image(draw_molecule(L3), caption=L3)
-                    search_df = df[(df['L1'] == canonize_l1) & (df['L2'] == canonize_l2) & (df['L3'] == canonize_l3)]
-                    if search_df.shape[0] == 0:
-                        L1_res_ecfp = calc(mol1)
-                        L2_res_ecfp = calc(mol2)
-                        L3_res_ecfp = calc(mol3)
-                        L_res = L1_res_ecfp + L2_res_ecfp + L3_res_ecfp
-                        L_res = L_res.reshape(1, -1)
-                        pred_lum = str(int(round(model_lum.predict(L_res)[0], 0)))
-                        pred_plqy = round(model_plqy.predict(L_res)[0]*100, 1)
-                        str_plqy = str(pred_plqy)
-                        predcol1, predcol2 = st.columns(2)
-                        predcol1.markdown(f'## Predicted luminescence wavelength:')
-                        predcol2.markdown(f'## Predicted PLQY:')
-                        predcol1.markdown(f'### {pred_lum} nm in dichloromethane')
-                        predcol2.markdown(f'### {str_plqy}% in dichloromethane')
-                        if pred_plqy <= 10:
-                            predcol2.image('low_qy.png', width=200)
-                            predcol2.markdown(f'### Low PLQY (0-10%)')
-                        elif 50 >= pred_plqy > 10:
-                            predcol2.image('moderate_qy.png', width=200)
-                            predcol2.markdown(f'### Moderate PLQY (10-50%)')
-                        else:
-                            predcol2.image('high_qy.png', width=200)
-                            predcol2.markdown(f'### High PLQY (50-100%)')
-                        df['res_dist'] = df['L1_ecfp'].apply(lambda ecfp1: hamming_distance(L1_res_ecfp, ecfp1)) + df['L1_ecfp'].apply(lambda ecfp2: hamming_distance(L2_res_ecfp, ecfp2)) + df['L3_ecfp'].apply(lambda ecfp3: hamming_distance(L3_res_ecfp, ecfp3))
-                        search_df = df[df['res_dist'] == df['res_dist'].min()]
-
-                        st.markdown(f'### Below are shown the most similar complexes found in the IrLumDB:')
-                        col1search, col2search, col3search, col4search, col5search, col6search, col7search, col8search = st.columns([1, 1, 1, 1, 1, 2, 2, 2])
-                        col1search.markdown(f'**λlum,nm**')
-                        col2search.markdown(f'**PLQY**')
-                        col3search.markdown(f'**Solvent**')
-                        col4search.markdown(f'**Abbreviation**')
-                        col5search.markdown(f'**Source**')
-                        col6search.markdown(f'**L1**')
-                        col7search.markdown(f'**L2**')
-                        col8search.markdown(f'**L3**')
-                        for lam, qy, solvent, doi, abbr, L1_df, L2_df, L3_df in zip(search_df['Max_wavelength(nm)'], search_df['PLQY'], search_df['Solvent'], search_df['DOI'], search_df['Abbreviation_in_the_article'], search_df['L1'], search_df['L2'], search_df['L3']):
-                            col1result, col2result, col3result, col4result, col5result, col6result, col7result, col8result = st.columns([1, 1, 1, 1, 1, 2, 2, 2])
-                            col1result.markdown(f'**{lam} nm**')
-                            col2result.markdown(f'**{qy}**')
-                            col3result.markdown(f'**{solvent}**')
-                            col4result.markdown(f'**{abbr}**')
-                            col5result.markdown(f'**https://doi.org/{doi}**')
-                            col6result.image(draw_molecule(L1_df), caption=L1_df)
-                            col7result.image(draw_molecule(L2_df), caption=L2_df)
-                            col8result.image(draw_molecule(L3_df), caption=L3_df)
-                    else:
-                        st.markdown(f'### Found this complex in IrLumDB:')
-                        col1search, col2search, col3search, col4search, col5search = st.columns([1, 1, 1, 3, 4])
-                        col1search.markdown(f'**λlum,nm**')
-                        col2search.markdown(f'**PLQY**')
-                        col3search.markdown(f'**Solvent:**')
-                        col4search.markdown(f'**Abbreviation in the source:**')
-                        col5search.markdown(f'**Source**')
-
-                        for lam, qy, solvent, doi, abbr in zip(search_df['Max_wavelength(nm)'], search_df['PLQY'], search_df['Solvent'], search_df['DOI'], search_df['Abbreviation_in_the_article']):
-                            col1result, col2result, col3result, col4result, col5result = st.columns([1, 1, 1, 3, 4])
-                            col1result.markdown(f'**{lam} nm**')
-                            col2result.markdown(f'**{qy}**')
-                            col3result.markdown(f'**{solvent}**')
-                            col4result.markdown(f'**{abbr}**')
-                            col5result.markdown(f'**https://doi.org/{doi}**')
-
-            else:
-                st.error("Incorrect SMILES entered")
-        else:
-            st.error("Please enter all three ligands")
+        #         else:
+        #             st.error("Incorrect SMILES entered")
+        #     else:
+        #         st.error("Please enter all three ligands")
 
 with tabs[2]:
     min_value = 400
