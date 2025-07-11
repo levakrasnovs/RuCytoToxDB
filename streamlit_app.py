@@ -165,36 +165,29 @@ with tabs[1]:
     smile_code = st_ketcher(height=400)
     st.markdown(f"""### Your SMILES:""")
     st.markdown(f"``{smile_code}``")
-    st.markdown(f"""### Copy and paste this SMILES into the corresponding box below:""")
 
-    num_ligands = st.text_input(
-            "Number of Ligands",
-            placeholder='3',
-            key='num_ligands')
-    
+    num_ligands = st.selectbox(
+        "Select number of ligands in your complex:",
+        options=[2, 3, 4, 5, 6],
+        index=1
+    )
+
     if num_ligands:
         smiles_inputs = []
-        for num in num_ligands:
+        for num in range(int(num_ligands)):
             smiles = st.text_input(f"SMILES L{num+1}")
             smiles_inputs.append(smiles)
-        smiles_complex = '.'.join(smiles_inputs)
-        st.markdown(smiles_complex)
 
-        # if st.button("Search in the database and predict properties"):
-        #     if L1 and L2 and L3:
-        #         mol1 = Chem.MolFromSmiles(L1.strip())
-        #         mol2 = Chem.MolFromSmiles(L2.strip())
-        #         mol3 = Chem.MolFromSmiles(L3.strip())
-        #         if (mol1 is not None) & (mol2 is not None) & (mol3 is not None):
-        #             if check_ligands(mol1, mol2, mol3):
-        #                 canonize_l1 = Chem.MolToSmiles(mol1)
-        #                 canonize_l2 = Chem.MolToSmiles(mol2)
-        #                 canonize_l3 = Chem.MolToSmiles(mol3)
-        #                 col1.image(draw_molecule(L1), caption=L1)
-        #                 col2.image(draw_molecule(L2), caption=L2)
-        #                 col3.image(draw_molecule(L3), caption=L3)
-        #                 search_df = df[(df['L1'] == canonize_l1) & (df['L2'] == canonize_l2) & (df['L3'] == canonize_l3)]
-        #                 if search_df.shape[0] == 0:
+        smiles_complex = '.'.join(smiles_inputs)
+
+        if st.button("Search in the database and predict properties"):
+            mol = Chem.MolFromSmiles(smiles_complex)
+            if (mol is not None):
+                canonize_smiles = Chem.MolToSmiles(mol)
+                st.image(draw_molecule(canonize_smiles), caption=canonize_smiles)
+                search_df = df[(df['SMILES_Ligands'] == canonize_smiles)]
+                if search_df.shape[0] == 0:
+                    st.markdown('Nothing found')
         #                     L1_res_ecfp = calc(mol1)
         #                     L2_res_ecfp = calc(mol2)
         #                     L3_res_ecfp = calc(mol3)
@@ -240,22 +233,22 @@ with tabs[1]:
         #                         col6result.image(draw_molecule(L1_df), caption=L1_df)
         #                         col7result.image(draw_molecule(L2_df), caption=L2_df)
         #                         col8result.image(draw_molecule(L3_df), caption=L3_df)
-        #                 else:
-        #                     st.markdown(f'### Found this complex in IrLumDB:')
-        #                     col1search, col2search, col3search, col4search, col5search = st.columns([1, 1, 1, 3, 4])
-        #                     col1search.markdown(f'**λlum,nm**')
-        #                     col2search.markdown(f'**PLQY**')
-        #                     col3search.markdown(f'**Solvent:**')
-        #                     col4search.markdown(f'**Abbreviation in the source:**')
-        #                     col5search.markdown(f'**Source**')
+                else:
+                    st.markdown(f'### Found this complex in RuCytoToxDB:')
+                    col1search, col2search, col3search, col4search, col5search = st.columns([1, 1, 1, 3, 4])
+                    col1search.markdown(f'**IC₅₀,μM**')
+                    col2search.markdown(f'**Сell line**')
+                    col3search.markdown(f'**Time(h)**')
+                    col4search.markdown(f'**Abbreviation in the source:**')
+                    col5search.markdown(f'**Source**')
 
-        #                     for lam, qy, solvent, doi, abbr in zip(search_df['Max_wavelength(nm)'], search_df['PLQY'], search_df['Solvent'], search_df['DOI'], search_df['Abbreviation_in_the_article']):
-        #                         col1result, col2result, col3result, col4result, col5result = st.columns([1, 1, 1, 3, 4])
-        #                         col1result.markdown(f'**{lam} nm**')
-        #                         col2result.markdown(f'**{qy}**')
-        #                         col3result.markdown(f'**{solvent}**')
-        #                         col4result.markdown(f'**{abbr}**')
-        #                         col5result.markdown(f'**https://doi.org/{doi}**')
+                    for ic50, cell_line, time, doi, abbr in zip(search_df['IC50_Dark(M*10^-6)'], search_df['Cell_line'], search_df['Time(h)'], search_df['DOI'], search_df['Abbreviation_in_the_article']):
+                        col1result, col2result, col3result, col4result, col5result = st.columns([1, 1, 1, 3, 4])
+                        col1result.markdown(f'**{ic50}**')
+                        col2result.markdown(f'**{cell_line}**')
+                        col3result.markdown(f'**{time}**')
+                        col4result.markdown(f'**{abbr}**')
+                        col5result.markdown(f'**https://doi.org/{doi}**')
 
         #         else:
         #             st.error("Incorrect SMILES entered")
