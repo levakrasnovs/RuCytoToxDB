@@ -98,7 +98,7 @@ st.markdown("""### There are currently two operation modes:
 * exploration of the database (**“Explore statistics”** window)
 * prediction of **IC₅₀** (**“search and predict”** window)""")
 
-tabs = st.tabs(["Explore statistics", "Search and Predict", "Advanced search"])
+tabs = st.tabs(["Explore statistics", "Search and Predict", "Advanced search", "Substructure search"])
 
 with tabs[0]:
 
@@ -159,8 +159,7 @@ with tabs[1]:
         exp3col.markdown('### dppb')
         exp3col.image(draw_molecule('c1ccc(P(CCCCP(c2ccccc2)c2ccccc2)c2ccccc2)cc1'), caption='c1ccc(P(CCCCP(c2ccccc2)c2ccccc2)c2ccccc2)cc1')
 
-
-    smile_code = st_ketcher(height=400)
+    smile_code = st_ketcher(height=400, key="ketcher_1")
     st.markdown(f"""### Your SMILES:""")
     st.markdown(f"``{smile_code}``")
 
@@ -173,7 +172,7 @@ with tabs[1]:
     if num_ligands:
         smiles_inputs = []
         for num in range(int(num_ligands)):
-            smiles = st.text_input(f"SMILES L{num+1}")
+            smiles = st.text_input(f"SMILES L{num+1}", key=f"search_{num}")
             smiles_inputs.append(smiles)
 
         smiles_complex = '.'.join(smiles_inputs)
@@ -293,3 +292,75 @@ with tabs[2]:
                 col7result.markdown(f'**{cis}**')
             else:
                 col7result.markdown(f'**No data**')
+
+with tabs[3]:
+    st.markdown("""### To get SMILES of your ligand, draw custom molecule and click **"Apply"** button or copy SMILES from popular ligands:""")
+    exp = st.expander("Popular ligands")
+    exp1col, exp2col, exp3col = exp.columns(3)
+    with exp:
+        exp1col.markdown('### p-cymene')
+        exp1col.image(draw_molecule('Cc1ccc(C(C)C)cc1'), caption='Cc1ccc(C(C)C)cc1')
+        exp2col.markdown('### bpy')
+        exp2col.image(draw_molecule('c1ccc(-c2ccccn2)nc1'), caption='c1ccc(-c2ccccn2)nc1')
+        exp3col.markdown('### phen')
+        exp3col.image(draw_molecule('c1cnc2c(c1)ccc1cccnc12'), caption='c1cnc2c(c1)ccc1cccnc12')
+        exp2col.markdown('### bphen')
+        exp2col.image(draw_molecule('c1ccc(-c2ccnc3c2ccc2c(-c4ccccc4)ccnc23)cc1'), caption='c1ccc(-c2ccnc3c2ccc2c(-c4ccccc4)ccnc23)cc1')
+        exp3col.markdown('### PPh3')
+        exp3col.image(draw_molecule('P(c1ccccc1)(c1ccccc1)c1ccccc1'), caption='P(c1ccccc1)(c1ccccc1)c1ccccc1')
+        exp1col.markdown('### [Cl-]')
+        exp1col.image(draw_molecule('[Cl-]'), caption='[Cl-]')
+        exp2col.markdown('### PTA')
+        exp2col.image(draw_molecule('C1N2CN3CN1CP(C2)C3'), caption='C1N2CN3CN1CP(C2)C3')
+        exp3col.markdown('### dppb')
+        exp3col.image(draw_molecule('c1ccc(P(CCCCP(c2ccccc2)c2ccccc2)c2ccccc2)cc1'), caption='c1ccc(P(CCCCP(c2ccccc2)c2ccccc2)c2ccccc2)cc1')
+
+    smile_code = st_ketcher(height=400, key="ketcher_2")
+    st.markdown(f"""### Your SMILES:""")
+    st.markdown(f"``{smile_code}``")
+
+    num_ligands = st.selectbox(
+        "Select number of ligands in your substructure search query:",
+        options=[1, 2, 3],
+        index=1
+    )
+
+    if num_ligands:
+        smiles_inputs = []
+        for num in range(int(num_ligands)):
+            smiles = st.text_input(f"SMILES L{num+1}", key=f"substructure_{num}")
+            smiles_inputs.append(smiles)
+
+        smiles_complex = '.'.join(smiles_inputs)
+
+        if st.button("Search in the database"):
+            mol = Chem.MolFromSmiles(smiles_complex)
+            if (mol is not None):
+                smiles_inputs = [canonize_smiles(smi) for smi in smiles_inputs]
+                search_df = df[(df['SMILES_Ligands'].apply(lambda x: all([smi in x.split('.') for smi in smiles_inputs])))].sort_values(by='IC50_Dark_value')
+                if search_df.shape[0] == 0:
+                    st.markdown('Nothing found')
+                else:
+                    num_compexes = search_df.drop_duplicates(subset=['SMILES_Ligands', 'Counterion']).shape[0]
+                    st.markdown(f'# Found {num_compexes}')
+                    col1search, col2search, col3search, col4search, col5search, col6search, col7search = st.columns([1, 1, 1, 1, 1, 1, 1])
+                    col1search.markdown(f'**Ligands of Ru complexes**')
+                    col2search.markdown(f'**IC₅₀,μM**')
+                    col3search.markdown(f'**Сell line**')
+                    col4search.markdown(f'**Time(h)**')
+                    col5search.markdown(f'**Abbreviation in the source:**')
+                    col6search.markdown(f'**Source**')
+                    col7search.markdown(f'**Cisplatin**')
+
+                    for smi, ic50, cell_line, time, doi, abbr, cis in zip(search_df['SMILES_Ligands'], search_df['IC50_Dark(M*10^-6)'], search_df['Cell_line'], search_df['Time(h)'], search_df['DOI'], search_df['Abbreviation_in_the_article'], search_df['IC50_Cisplatin(M*10^-6)']):
+                        col1result, col2result, col3result, col4result, col5result, col6result, col7result = st.columns([1, 1, 1, 1, 1, 1, 1])
+                        col1result.image(draw_molecule(smi), caption=smi, use_container_width=True)
+                        col2result.markdown(f'**{ic50}**')
+                        col3result.markdown(f'**{cell_line}**')
+                        col4result.markdown(f'**{time}**')
+                        col5result.markdown(f'**{abbr}**')
+                        col6result.markdown(f'**https://doi.org/{doi}**')
+                        if not pd.isna(cis):
+                            col7result.markdown(f'**{cis}**')
+                        else:
+                            col7result.markdown(f'**No data**')
