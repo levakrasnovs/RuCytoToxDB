@@ -280,7 +280,7 @@ with tabs[2]:
 
         for smi, ic50, cell_line, time, doi, abbr, cis in zip(search_df['SMILES_Ligands'], search_df['IC50_Dark(M*10^-6)'], search_df['Cell_line'], search_df['Time(h)'], search_df['DOI'], search_df['Abbreviation_in_the_article'], search_df['IC50_Cisplatin(M*10^-6)']):
             col1result, col2result, col3result, col4result, col5result, col6result, col7result = st.columns([1, 1, 1, 1, 1, 1, 1])
-            col1result.image(draw_molecule(smi), caption=smi, use_column_width=True)
+            col1result.image(draw_molecule(smi), caption=smi, use_container_width=True)
             col2result.markdown(f'**{ic50}**')
             col3result.markdown(f'**{cell_line}**')
             col4result.markdown(f'**{time}**')
