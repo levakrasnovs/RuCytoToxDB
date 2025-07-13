@@ -2,11 +2,22 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import streamlit as st
-from rdkit import Chem
-from rdkit.Chem import Draw
 from xgboost import XGBRegressor
 from streamlit_ketcher import st_ketcher
 from molfeat.calc import FPCalculator
+
+from rdkit import Chem
+from rdkit.Chem import Draw
+from rdkit.Chem.Scaffolds import MurckoScaffold
+
+def get_murcko_scaffold(smiles):
+    mol = Chem.MolFromSmiles(smiles)
+    if mol is not None:
+        scaffold = MurckoScaffold.GetScaffoldForMol(mol)
+        return Chem.MolToSmiles(scaffold)
+    else:
+        return None
+    
 
 def scale_ic50(ic50):
     if ic50 > 100:
@@ -65,11 +76,14 @@ st.set_page_config(page_title='RuCytoToxDB', layout="wide")
 df = pd.read_csv('RuCytoToxDB.csv')
 df['IC50_Dark_value'] = df['IC50_Dark_value'].apply(scale_ic50)
 df['IC50_class'] = df['IC50_Dark_value'].apply(class_ic50)
+
 cells = df['Cell_line'].value_counts().reset_index().loc[:19]
 years = df.drop_duplicates(subset=['DOI'])['Year'].value_counts().reset_index()
 times = df['Time(h)'].value_counts().reset_index().loc[:5]
 ic50_class = df['IC50_class'].value_counts().reset_index()
 ic50_class['IC50_class'].replace({0: '≥10 μM', 1: '<10μM'}, inplace=True)
+line_list = df['Cell_line'].value_counts().nlargest(50).index.tolist()
+time_list = df['Time(h)'].value_counts().nlargest(5).index.tolist()
 
 n_entries = df.shape[0]
 n_smiles = df.drop_duplicates(['SMILES_Ligands', 'Counterion']).shape[0]
@@ -98,7 +112,7 @@ st.markdown("""### There are currently two operation modes:
 * exploration of the database (**“Explore statistics”** window)
 * prediction of **IC₅₀** (**“search and predict”** window)""")
 
-tabs = st.tabs(["Explore statistics", "Search and Predict", "Advanced search", "Substructure search"])
+tabs = st.tabs(["Explore statistics", "Search and Predict", "Advanced search", "Search by fixed ligand subset"])
 
 with tabs[0]:
 
@@ -250,7 +264,7 @@ with tabs[1]:
                         col3result.markdown(f'**{time}**')
                         col4result.markdown(f'**{abbr}**')
                         col5result.markdown(f'**https://doi.org/{doi}**')
-
+                    st.dataframe(search_df)
         #         else:
         #             st.error("Incorrect SMILES entered")
         #     else:
@@ -258,8 +272,6 @@ with tabs[1]:
 
 with tabs[2]:
     col1select, col2select, col3select = st.columns([1, 1, 1])
-    line_list = df['Cell_line'].value_counts().nlargest(50).index.tolist()
-    time_list = df['Time(h)'].value_counts().nlargest(5).index.tolist()
     selected_line = col1select.selectbox(label='Choose line', options=line_list, index=None, placeholder='A549')
     selected_time = col2select.selectbox(label='Choose exposure time (h)', options=['All time ranges'] + time_list, index=0)
     select_sorting = col3select.selectbox(label='Choose the sorting type', options=['Most cytooxic above', 'Least cytooxic above'], index=0)
@@ -341,16 +353,47 @@ with tabs[3]:
 
         smiles_complex = '.'.join(smiles_inputs)
 
+        col1select, col2select, col3select, col4select = st.columns([1, 1, 1, 1])
+        selected_line = col1select.selectbox(label='Choose line', options=['All cell lines'] + line_list, index=0, placeholder='A549', key="substructure_line")
+        selected_time = col2select.selectbox(label='Choose exposure time (h)', options=['All time ranges'] + time_list, index=0, key="substructure_time")
+        selected_sorting = col3select.selectbox(label='Choose the sorting type', options=['Most cytooxic above', 'Least cytooxic above'], index=0, key="substructure_sort")
+        selected_scaffold = col4select.selectbox(label='Choose the search regime', options=['Full molecule match', 'Scaffold-based search'], index=0, key="substructure_scaffold")
+
         if st.button("Search in the database"):
             mol = Chem.MolFromSmiles(smiles_complex)
             if (mol is not None):
                 smiles_inputs = [canonize_smiles(smi) for smi in smiles_inputs]
-                search_df = df[(df['SMILES_Ligands'].apply(lambda x: all([smi in x.split('.') for smi in smiles_inputs])))].sort_values(by='SMILES_Ligands')
+                if selected_scaffold == 'Full molecule match': 
+                    search_df = df[(df['SMILES_Ligands'].apply(lambda x: all([smi in x.split('.') for smi in smiles_inputs])))].sort_values(by='SMILES_Ligands')
+                else:
+                    smiles_inputs = [get_murcko_scaffold(smi) if get_murcko_scaffold(smi) != '' else smi for smi in smiles_inputs]
+                    st.markdown("""### Your scaffold:""")
+                    st.image(draw_molecule('.'.join(smiles_inputs)), caption='.'.join(smiles_inputs))
+                    search_df = df[(df['Scaffold'].apply(lambda x: all([smi in x.split('.') for smi in smiles_inputs])))].sort_values(by='SMILES_Ligands')
+                if selected_line != 'All cell lines':
+                    search_df = search_df[(search_df['Cell_line'] == selected_line)]
+                if selected_time != 'All time ranges':
+                    search_df = search_df[(search_df['Time(h)'] == selected_time)]
+                if selected_sorting == 'Least cytooxic above':
+                    search_df.sort_values(by='IC50_Dark_value', ascending=False, inplace=True)
+                else:
+                    search_df.sort_values(by='IC50_Dark_value', ascending=True, inplace=True)
+
                 if search_df.shape[0] == 0:
                     st.markdown('Nothing found')
                 else:
+                    csv = search_df.to_csv(index=False).encode('utf-8')
+
+                    st.download_button(
+                        label="📥 Download this data in CSV",
+                        data=csv,
+                        file_name="ic50.csv",
+                        mime="text/csv"
+                    )
+
                     num_compexes = search_df.drop_duplicates(subset=['SMILES_Ligands', 'Counterion']).shape[0]
-                    st.markdown(f'# Found {num_compexes} complexes')
+                    num_ic50 = search_df.shape[0]
+                    st.markdown(f'# Found {num_compexes} complexes and {num_ic50} IC₅₀ values')
                     col1search, col2search, col3search, col4search, col5search, col6search, col7search = st.columns([1, 1, 1, 1, 1, 1, 1])
                     col1search.markdown(f'**Ligands of Ru complexes**')
                     col2search.markdown(f'**IC₅₀,μM**')
