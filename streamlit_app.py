@@ -115,7 +115,7 @@ if "visibility" not in st.session_state:
 st.set_page_config(page_title='MetalCytoToxDB', layout="wide")
 
 df = pd.read_csv('MetalCytoToxDB.csv')
-authors = pd.read_excel('Authors.xlsx')
+authors = pd.read_csv('Authors.csv')
 df['IC50_Dark_value'] = df['IC50_Dark_value'].apply(scale_ic50)
 df['IC50_class'] = df['IC50_Dark_value'].apply(class_ic50)
 
