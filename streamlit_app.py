@@ -150,7 +150,7 @@ col2intro.markdown(f"""# Overall stats:
 
 col3intro.image('TOC.png')
 
-tabs = st.tabs(["Explore statistics", "Search and Predict", "Search by cell line", "Search by fixed ligand subset", "Search by DOI and Authors"])
+tabs = st.tabs(["Explore statistics", "Search and Predict", "Search by cell line and metal", "Search by fixed ligand subset", "Search by DOI and Authors"])
 
 with tabs[0]:
 
@@ -346,26 +346,26 @@ with tabs[4]:
     col1select, col2select = st.columns([1, 1])
     doi = col1select.text_input(f"DOI", key=f"DOI")
     author = col2select.text_input(f"Author surname", key=f"Author", placeholder='Keppler')
-    if st.button("Search in the database", key=f"DOI_button"):
-        if doi:
-            doi = doi.replace('https://doi.org/', '')
-            doi = doi.replace('http://doi.org/', '')
-            doi = doi.replace('http://dx.doi.org/', '')
-            doi = doi.replace('https://dx.doi.org/', '')
-            doi = doi.replace('https://www.doi.org/', '')
-            doi = doi.replace('https://www.dx.doi.org/', '')
-            doi = doi.replace('doi.org/', '')
-            doi = doi.lower()
-            search_df = df[df['DOI'].apply(lambda x: x.lower() == doi)]
-            if search_df.shape[0] == 0:
-                st.markdown('Nothing found')
-            else:
-                show_search_results(search_df)
-        if author:
-            author = author.lower()
-            author_df = authors[authors['Authors'].apply(lambda x: author in x.lower())]
-            search_df = df[df['DOI'].isin(author_df['DOI'])]
-            if search_df.shape[0] == 0:
-                st.markdown('Nothing found')
-            else:
-                show_search_results(search_df)
+
+    if doi:
+        doi = doi.replace('https://doi.org/', '')
+        doi = doi.replace('http://doi.org/', '')
+        doi = doi.replace('http://dx.doi.org/', '')
+        doi = doi.replace('https://dx.doi.org/', '')
+        doi = doi.replace('https://www.doi.org/', '')
+        doi = doi.replace('https://www.dx.doi.org/', '')
+        doi = doi.replace('doi.org/', '')
+        doi = doi.lower()
+        search_df = df[df['DOI'].apply(lambda x: x.lower() == doi)]
+        if search_df.shape[0] == 0:
+            st.markdown('Nothing found')
+        else:
+            show_search_results(search_df)
+    if author:
+        author = author.lower()
+        author_df = authors[authors['Authors'].apply(lambda x: author in x.lower())]
+        search_df = df[df['DOI'].isin(author_df['DOI'])]
+        if search_df.shape[0] == 0:
+            st.markdown('Nothing found')
+        else:
+            show_search_results(search_df)
