@@ -64,6 +64,47 @@ def check_ligands(mol1, mol2, mol3):
         return False
     else:
         return True
+    
+def show_search_results(search_df):
+
+    csv = search_df.to_csv(index=False).encode('utf-8')
+
+    st.download_button(
+        label="📥 Download this data in CSV",
+        data=csv,
+        file_name="ic50.csv",
+        mime="text/csv"
+    )
+
+    num_compexes = search_df.drop_duplicates(subset=['SMILES_Ligands', 'Metal']).shape[0]
+    num_ic50 = search_df.drop_duplicates(subset=['SMILES_Ligands', 'Counterion', 'IC50_Dark(M*10^-6)', 'Cell_line', 'Time(h)', 'DOI', 'Metal']).shape[0]
+    num_sources = search_df['DOI'].nunique()
+    st.markdown(f'# Found {num_compexes} complexes and {num_ic50} IC₅₀ values from {num_sources} sources')
+    search_df = search_df[:100]
+    col1search, col2search, col3search, col4search, col5search, col6search, col7search, col8search = st.columns([1, 1, 1, 1, 1, 1, 1, 1])
+    col1search.markdown(f'**Ligands of complexes**')
+    col2search.markdown(f'**Metal**')
+    col3search.markdown(f'**IC₅₀,μM**')
+    col4search.markdown(f'**Сell line**')
+    col5search.markdown(f'**Time(h)**')
+    col6search.markdown(f'**Abbreviation in the source:**')
+    col7search.markdown(f'**Source**')
+    col8search.markdown(f'**Cisplatin**')
+
+    for smi, metal, ic50, cell_line, time, doi, abbr, cis in zip(search_df['SMILES_Ligands'], search_df['Metal'], search_df['IC50_Dark(M*10^-6)'], search_df['Cell_line'], search_df['Time(h)'], search_df['DOI'], search_df['Abbreviation_in_the_article'], search_df['IC50_Cisplatin(M*10^-6)']):
+        col1result, col2result, col3result, col4result, col5result, col6result, col7result, col8result = st.columns([1, 1, 1, 1, 1, 1, 1, 1])
+        col1result.image(draw_molecule(smi), caption=smi, use_container_width=True)
+        col2result.markdown(f'**{metal}**')
+        col3result.markdown(f'**{ic50}**')
+        col4result.markdown(f'**{cell_line}**')
+        col5result.markdown(f'**{time}**')
+        col6result.markdown(f'**{abbr}**')
+        col7result.markdown(f'**https://doi.org/{doi}**')
+        if not pd.isna(cis):
+            col8result.markdown(f'**{cis}**')
+        else:
+            col8result.markdown(f'**No data**')
+
 
 calc = FPCalculator("ecfp")
 
@@ -71,9 +112,10 @@ if "visibility" not in st.session_state:
     st.session_state.visibility = "visible"
     st.session_state.disabled = False
 
-st.set_page_config(page_title='RuCytoToxDB', layout="wide")
+st.set_page_config(page_title='MetalCytoToxDB', layout="wide")
 
-df = pd.read_csv('RuCytoToxDB.csv')
+df = pd.read_csv('MetalCytoToxDB.csv')
+authors = pd.read_excel('Authors.xlsx')
 df['IC50_Dark_value'] = df['IC50_Dark_value'].apply(scale_ic50)
 df['IC50_class'] = df['IC50_Dark_value'].apply(class_ic50)
 
@@ -83,36 +125,32 @@ times = df['Time(h)'].value_counts().reset_index().loc[:5]
 ic50_class = df['IC50_class'].value_counts().reset_index()
 ic50_class['IC50_class'].replace({0: '≥10 μM', 1: '<10μM'}, inplace=True)
 line_list = df['Cell_line'].value_counts().nlargest(50).index.tolist()
-time_list = df['Time(h)'].value_counts().nlargest(5).index.tolist()
+time_list = df['Time(h)'].value_counts().nlargest(6).index.tolist()
+metal_list = df['Metal'].value_counts().index.tolist()
 
-n_entries = df.shape[0]
-n_smiles = df.drop_duplicates(['SMILES_Ligands', 'Counterion']).shape[0]
+n_entries = df.drop_duplicates(subset=['SMILES_Ligands', 'Counterion', 'IC50_Dark(M*10^-6)', 'Cell_line', 'Time(h)', 'DOI', 'Metal']).shape[0]
+n_smiles = df.drop_duplicates(['SMILES_Ligands', 'Metal']).shape[0]
 n_sources = df['DOI'].nunique()
 n_cell = df['Cell_line'].nunique()
 
 col1intro, col2intro, col3intro = st.columns([1, 1, 2])
 col1intro.markdown(f"""
-# RuCytoToxDB App v1.0
+# MetalCytoToxDB
+The ”MetalCytoToxDB App” is an ML-based service integrated with the experimental database to explore literature cytotoxicity data (IC₅₀) of metal complexes.
 
-The ”RuCytoToxDB App” is an ML-based service integrated with the experimental database to explore literature cytotoxicity data and predict cytotoxicity (IC50) of ruthenium complexes requiring only molecular formula of the ligands as a feature.
-
-Download RuCytoToxDB: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15853577.svg)](https://doi.org/10.5281/zenodo.15853577)
+Download MetalCytoToxDB: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15853577.svg)](https://doi.org/10.5281/zenodo.15853577)
                    
 """)
 
 col2intro.markdown(f"""# Overall stats: 
-* **{n_entries}** number of entries
-* **{n_smiles}** unique ruthenium complexes
+* **{n_entries}** IC₅₀ values
+* **{n_smiles}** unique metal complexes (Ru, Ir, Os, Rh, Re)
 * **{n_sources}** literature sources
 * **{n_cell}** cell lines""")
 
 col3intro.image('TOC.png')
 
-st.markdown("""### There are currently two operation modes:
-* exploration of the database (**“Explore statistics”** window)
-* prediction of **IC₅₀** (**“search and predict”** window)""")
-
-tabs = st.tabs(["Explore statistics", "Search and Predict", "Advanced search", "Search by fixed ligand subset"])
+tabs = st.tabs(["Explore statistics", "Search and Predict", "Search by cell line", "Search by fixed ligand subset", "Search by DOI and Authors"])
 
 with tabs[0]:
 
@@ -199,115 +237,35 @@ with tabs[1]:
             mol = Chem.MolFromSmiles(smiles_complex)
             if (mol is not None):
                 canonize_smiles = Chem.MolToSmiles(mol)
-                st.image(draw_molecule(canonize_smiles), caption=canonize_smiles)
                 search_df = df[(df['SMILES_Ligands'] == canonize_smiles)]
                 if search_df.shape[0] == 0:
                     st.markdown('Nothing found')
-        #                     L1_res_ecfp = calc(mol1)
-        #                     L2_res_ecfp = calc(mol2)
-        #                     L3_res_ecfp = calc(mol3)
-        #                     L_res = L1_res_ecfp + L2_res_ecfp + L3_res_ecfp
-        #                     L_res = L_res.reshape(1, -1)
-        #                     pred_lum = str(int(round(model_lum.predict(L_res)[0], 0)))
-        #                     pred_plqy = round(model_plqy.predict(L_res)[0]*100, 1)
-        #                     str_plqy = str(pred_plqy)
-        #                     predcol1, predcol2 = st.columns(2)
-        #                     predcol1.markdown(f'## Predicted luminescence wavelength:')
-        #                     predcol2.markdown(f'## Predicted PLQY:')
-        #                     predcol1.markdown(f'### {pred_lum} nm in dichloromethane')
-        #                     predcol2.markdown(f'### {str_plqy}% in dichloromethane')
-        #                     if pred_plqy <= 10:
-        #                         predcol2.image('low_qy.png', width=200)
-        #                         predcol2.markdown(f'### Low PLQY (0-10%)')
-        #                     elif 50 >= pred_plqy > 10:
-        #                         predcol2.image('moderate_qy.png', width=200)
-        #                         predcol2.markdown(f'### Moderate PLQY (10-50%)')
-        #                     else:
-        #                         predcol2.image('high_qy.png', width=200)
-        #                         predcol2.markdown(f'### High PLQY (50-100%)')
-        #                     df['res_dist'] = df['L1_ecfp'].apply(lambda ecfp1: hamming_distance(L1_res_ecfp, ecfp1)) + df['L1_ecfp'].apply(lambda ecfp2: hamming_distance(L2_res_ecfp, ecfp2)) + df['L3_ecfp'].apply(lambda ecfp3: hamming_distance(L3_res_ecfp, ecfp3))
-        #                     search_df = df[df['res_dist'] == df['res_dist'].min()]
 
-        #                     st.markdown(f'### Below are shown the most similar complexes found in the IrLumDB:')
-        #                     col1search, col2search, col3search, col4search, col5search, col6search, col7search, col8search = st.columns([1, 1, 1, 1, 1, 2, 2, 2])
-        #                     col1search.markdown(f'**λlum,nm**')
-        #                     col2search.markdown(f'**PLQY**')
-        #                     col3search.markdown(f'**Solvent**')
-        #                     col4search.markdown(f'**Abbreviation**')
-        #                     col5search.markdown(f'**Source**')
-        #                     col6search.markdown(f'**L1**')
-        #                     col7search.markdown(f'**L2**')
-        #                     col8search.markdown(f'**L3**')
-        #                     for lam, qy, solvent, doi, abbr, L1_df, L2_df, L3_df in zip(search_df['Max_wavelength(nm)'], search_df['PLQY'], search_df['Solvent'], search_df['DOI'], search_df['Abbreviation_in_the_article'], search_df['L1'], search_df['L2'], search_df['L3']):
-        #                         col1result, col2result, col3result, col4result, col5result, col6result, col7result, col8result = st.columns([1, 1, 1, 1, 1, 2, 2, 2])
-        #                         col1result.markdown(f'**{lam} nm**')
-        #                         col2result.markdown(f'**{qy}**')
-        #                         col3result.markdown(f'**{solvent}**')
-        #                         col4result.markdown(f'**{abbr}**')
-        #                         col5result.markdown(f'**https://doi.org/{doi}**')
-        #                         col6result.image(draw_molecule(L1_df), caption=L1_df)
-        #                         col7result.image(draw_molecule(L2_df), caption=L2_df)
-        #                         col8result.image(draw_molecule(L3_df), caption=L3_df)
                 else:
                     st.markdown(f'### Found this complex in RuCytoToxDB:')
-                    col1search, col2search, col3search, col4search, col5search = st.columns([1, 1, 1, 3, 4])
-                    col1search.markdown(f'**IC₅₀,μM**')
-                    col2search.markdown(f'**Сell line**')
-                    col3search.markdown(f'**Time(h)**')
-                    col4search.markdown(f'**Abbreviation in the source:**')
-                    col5search.markdown(f'**Source**')
-
-                    for ic50, cell_line, time, doi, abbr in zip(search_df['IC50_Dark(M*10^-6)'], search_df['Cell_line'], search_df['Time(h)'], search_df['DOI'], search_df['Abbreviation_in_the_article']):
-                        col1result, col2result, col3result, col4result, col5result = st.columns([1, 1, 1, 3, 4])
-                        col1result.markdown(f'**{ic50}**')
-                        col2result.markdown(f'**{cell_line}**')
-                        col3result.markdown(f'**{time}**')
-                        col4result.markdown(f'**{abbr}**')
-                        col5result.markdown(f'**https://doi.org/{doi}**')
-                    st.dataframe(search_df)
-        #         else:
-        #             st.error("Incorrect SMILES entered")
-        #     else:
-        #         st.error("Please enter all three ligands")
+                    show_search_results(search_df)
 
 with tabs[2]:
-    col1select, col2select, col3select = st.columns([1, 1, 1])
+    col1select, col2select, col3select, col4select = st.columns([1, 1, 1, 1])
     selected_line = col1select.selectbox(label='Choose line', options=line_list, index=None, placeholder='A549')
-    selected_time = col2select.selectbox(label='Choose exposure time (h)', options=['All time ranges'] + time_list, index=0)
-    select_sorting = col3select.selectbox(label='Choose the sorting type', options=['Most cytooxic above', 'Least cytooxic above'], index=0)
+    selected_metal = col2select.selectbox(label='Choose Metal', options=['All metals'] + metal_list, index=0)
+    selected_time = col3select.selectbox(label='Choose exposure time (h)', options=['All time ranges'] + time_list, index=0)
+    select_sorting = col4select.selectbox(label='Choose the sorting type', options=['Most cytooxic above', 'Least cytooxic above'], index=0)
 
+    if selected_metal == 'All metals':
+        search_df = df
+    else:
+        search_df = df[(df['Metal'] == selected_metal)]
     if selected_line:
         if selected_time == 'All time ranges':
-            search_df = df[(df['Cell_line'] == selected_line)]
+            search_df = search_df[(search_df['Cell_line'] == selected_line)]
         else:
-            search_df = df[(df['Cell_line'] == selected_line) & (df['Time(h)'] == selected_time)]
+            search_df = search_df[(search_df['Cell_line'] == selected_line) & (search_df['Time(h)'] == selected_time)]
         if select_sorting == 'Least cytooxic above':
             search_df.sort_values(by='IC50_Dark_value', ascending=False, inplace=True)
         else:
             search_df.sort_values(by='IC50_Dark_value', ascending=True, inplace=True)
-        num_compexes = search_df.drop_duplicates(subset=['SMILES_Ligands', 'Counterion']).shape[0]
-        st.markdown(f'# Found {num_compexes} complexes')
-        col1search, col2search, col3search, col4search, col5search, col6search, col7search = st.columns([1, 1, 1, 1, 1, 1, 1])
-        col1search.markdown(f'**Ligands of Ru complexes**')
-        col2search.markdown(f'**IC₅₀,μM**')
-        col3search.markdown(f'**Сell line**')
-        col4search.markdown(f'**Time(h)**')
-        col5search.markdown(f'**Abbreviation in the source:**')
-        col6search.markdown(f'**Source**')
-        col7search.markdown(f'**Cisplatin**')
-
-        for smi, ic50, cell_line, time, doi, abbr, cis in zip(search_df['SMILES_Ligands'], search_df['IC50_Dark(M*10^-6)'], search_df['Cell_line'], search_df['Time(h)'], search_df['DOI'], search_df['Abbreviation_in_the_article'], search_df['IC50_Cisplatin(M*10^-6)']):
-            col1result, col2result, col3result, col4result, col5result, col6result, col7result = st.columns([1, 1, 1, 1, 1, 1, 1])
-            col1result.image(draw_molecule(smi), caption=smi, use_container_width=True)
-            col2result.markdown(f'**{ic50}**')
-            col3result.markdown(f'**{cell_line}**')
-            col4result.markdown(f'**{time}**')
-            col5result.markdown(f'**{abbr}**')
-            col6result.markdown(f'**https://doi.org/{doi}**')
-            if not pd.isna(cis):
-                col7result.markdown(f'**{cis}**')
-            else:
-                col7result.markdown(f'**No data**')
+        show_search_results(search_df)
 
 with tabs[3]:
     st.markdown("""### To get SMILES of your ligand, draw custom molecule and click **"Apply"** button or copy SMILES from popular ligands:""")
@@ -356,7 +314,7 @@ with tabs[3]:
         col1select, col2select, col3select, col4select = st.columns([1, 1, 1, 1])
         selected_line = col1select.selectbox(label='Choose line', options=['All cell lines'] + line_list, index=0, placeholder='A549', key="substructure_line")
         selected_time = col2select.selectbox(label='Choose exposure time (h)', options=['All time ranges'] + time_list, index=0, key="substructure_time")
-        selected_sorting = col3select.selectbox(label='Choose the sorting type', options=['Most cytooxic above', 'Least cytooxic above'], index=0, key="substructure_sort")
+        selected_sorting = col3select.selectbox(label='Choose the sorting type', options=['Most cytotoxic above', 'Least cytotoxic above'], index=0, key="substructure_sort")
         selected_scaffold = col4select.selectbox(label='Choose the search regime', options=['Full molecule match', 'Scaffold-based search'], index=0, key="substructure_scaffold")
 
         if st.button("Search in the database"):
@@ -382,36 +340,32 @@ with tabs[3]:
                 if search_df.shape[0] == 0:
                     st.markdown('Nothing found')
                 else:
-                    csv = search_df.to_csv(index=False).encode('utf-8')
+                    show_search_results(search_df)
 
-                    st.download_button(
-                        label="📥 Download this data in CSV",
-                        data=csv,
-                        file_name="ic50.csv",
-                        mime="text/csv"
-                    )
-
-                    num_compexes = search_df.drop_duplicates(subset=['SMILES_Ligands', 'Counterion']).shape[0]
-                    num_ic50 = search_df.shape[0]
-                    st.markdown(f'# Found {num_compexes} complexes and {num_ic50} IC₅₀ values')
-                    col1search, col2search, col3search, col4search, col5search, col6search, col7search = st.columns([1, 1, 1, 1, 1, 1, 1])
-                    col1search.markdown(f'**Ligands of Ru complexes**')
-                    col2search.markdown(f'**IC₅₀,μM**')
-                    col3search.markdown(f'**Сell line**')
-                    col4search.markdown(f'**Time(h)**')
-                    col5search.markdown(f'**Abbreviation in the source:**')
-                    col6search.markdown(f'**Source**')
-                    col7search.markdown(f'**Cisplatin**')
-
-                    for smi, ic50, cell_line, time, doi, abbr, cis in zip(search_df['SMILES_Ligands'], search_df['IC50_Dark(M*10^-6)'], search_df['Cell_line'], search_df['Time(h)'], search_df['DOI'], search_df['Abbreviation_in_the_article'], search_df['IC50_Cisplatin(M*10^-6)']):
-                        col1result, col2result, col3result, col4result, col5result, col6result, col7result = st.columns([1, 1, 1, 1, 1, 1, 1])
-                        col1result.image(draw_molecule(smi), caption=smi, use_container_width=True)
-                        col2result.markdown(f'**{ic50}**')
-                        col3result.markdown(f'**{cell_line}**')
-                        col4result.markdown(f'**{time}**')
-                        col5result.markdown(f'**{abbr}**')
-                        col6result.markdown(f'**https://doi.org/{doi}**')
-                        if not pd.isna(cis):
-                            col7result.markdown(f'**{cis}**')
-                        else:
-                            col7result.markdown(f'**No data**')
+with tabs[4]:
+    col1select, col2select = st.columns([1, 1])
+    doi = col1select.text_input(f"DOI", key=f"DOI")
+    author = col2select.text_input(f"Author surname", key=f"Author", placeholder='Keppler')
+    if st.button("Search in the database", key=f"DOI_button"):
+        if doi:
+            doi = doi.replace('https://doi.org/', '')
+            doi = doi.replace('http://doi.org/', '')
+            doi = doi.replace('http://dx.doi.org/', '')
+            doi = doi.replace('https://dx.doi.org/', '')
+            doi = doi.replace('https://www.doi.org/', '')
+            doi = doi.replace('https://www.dx.doi.org/', '')
+            doi = doi.replace('doi.org/', '')
+            doi = doi.lower()
+            search_df = df[df['DOI'].apply(lambda x: x.lower() == doi)]
+            if search_df.shape[0] == 0:
+                st.markdown('Nothing found')
+            else:
+                show_search_results(search_df)
+        if author:
+            author = author.lower()
+            author_df = authors[authors['Authors'].apply(lambda x: author in x.lower())]
+            search_df = df[df['DOI'].isin(author_df['DOI'])]
+            if search_df.shape[0] == 0:
+                st.markdown('Nothing found')
+            else:
+                show_search_results(search_df)
