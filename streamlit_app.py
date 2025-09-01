@@ -242,7 +242,7 @@ with tabs[1]:
                     st.markdown('Nothing found')
 
                 else:
-                    st.markdown(f'### Found this complex in RuCytoToxDB:')
+                    st.markdown(f'### Found this complex in MetalCytoToxDB:')
                     show_search_results(search_df)
 
 with tabs[2]:
@@ -250,7 +250,7 @@ with tabs[2]:
     selected_line = col1select.selectbox(label='Choose line', options=line_list, index=None, placeholder='A549')
     selected_metal = col2select.selectbox(label='Choose Metal', options=['All metals'] + metal_list, index=0)
     selected_time = col3select.selectbox(label='Choose exposure time (h)', options=['All time ranges'] + time_list, index=0)
-    select_sorting = col4select.selectbox(label='Choose the sorting type', options=['Most cytooxic above', 'Least cytooxic above'], index=0)
+    select_sorting = col4select.selectbox(label='Choose the sorting type', options=['Most cytotoxic above', 'Least cytotoxic above'], index=0)
 
     if selected_metal == 'All metals':
         search_df = df
@@ -261,7 +261,7 @@ with tabs[2]:
             search_df = search_df[(search_df['Cell_line'] == selected_line)]
         else:
             search_df = search_df[(search_df['Cell_line'] == selected_line) & (search_df['Time(h)'] == selected_time)]
-        if select_sorting == 'Least cytooxic above':
+        if select_sorting == 'Least cytotoxic above':
             search_df.sort_values(by='IC50_Dark_value', ascending=False, inplace=True)
         else:
             search_df.sort_values(by='IC50_Dark_value', ascending=True, inplace=True)
@@ -332,7 +332,7 @@ with tabs[3]:
                     search_df = search_df[(search_df['Cell_line'] == selected_line)]
                 if selected_time != 'All time ranges':
                     search_df = search_df[(search_df['Time(h)'] == selected_time)]
-                if selected_sorting == 'Least cytooxic above':
+                if selected_sorting == 'Least cytotoxic above':
                     search_df.sort_values(by='IC50_Dark_value', ascending=False, inplace=True)
                 else:
                     search_df.sort_values(by='IC50_Dark_value', ascending=True, inplace=True)
