@@ -133,7 +133,7 @@ n_smiles = df.drop_duplicates(['SMILES_Ligands', 'Metal']).shape[0]
 n_sources = df['DOI'].nunique()
 n_cell = df['Cell_line'].nunique()
 
-col1intro, col2intro, col3intro = st.columns([1, 1, 2])
+col1intro, col2intro, col3intro = st.columns([1, 1, 1])
 col1intro.markdown(f"""
 # MetalCytoToxDB
 The ”MetalCytoToxDB App” is an ML-based service integrated with the experimental database to explore literature cytotoxicity data (IC₅₀) of metal complexes.
