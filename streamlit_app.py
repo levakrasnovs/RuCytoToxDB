@@ -144,7 +144,7 @@ Download MetalCytoToxDB: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.158
 
 col2intro.markdown(f"""# Overall stats: 
 * **{n_entries}** IC₅₀ values
-* **{n_smiles}** unique metal complexes (Ru, Ir, Os, Rh, Re)
+* **{n_smiles}** complexes (Ru, Ir, Os, Rh, Re)
 * **{n_sources}** literature sources
 * **{n_cell}** cell lines""")
 
