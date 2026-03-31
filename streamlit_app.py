@@ -891,6 +891,41 @@ if page == "🔍  Search complexes":
 
 
 
+elif page == "📚  Literature":
+
+    st.markdown("""
+    <div style="margin-bottom:24px;">
+        <div style="font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;
+                    color:#e8ecf4;margin-bottom:8px;">Literature</div>
+        <div style="font-family:'DM Sans',sans-serif;font-size:0.88rem;color:#8892a4;line-height:1.6;">
+            Look up all IC&#8325;&#8320; data from a specific article or author.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col1select, col2select = st.columns([1, 1])
+    doi = col1select.text_input("DOI", key="DOI")
+    author = col2select.text_input("Author surname", key="Author", placeholder="Keppler")
+
+    if doi:
+        doi = doi.replace('https://doi.org/', '').replace('http://doi.org/', '')
+        doi = doi.replace('http://dx.doi.org/', '').replace('https://dx.doi.org/', '')
+        doi = doi.replace('https://www.doi.org/', '').replace('https://www.dx.doi.org/', '')
+        doi = doi.replace('doi.org/', '').lower()
+        search_df = df[df['DOI'].apply(lambda x: x.lower() == doi)]
+        if search_df.shape[0] == 0:
+            st.markdown('Nothing found')
+        else:
+            show_search_results(search_df)
+    if author:
+        author = author.lower()
+        author_df = authors[authors['Authors'].apply(lambda x: author in x.lower())]
+        search_df = df[df['DOI'].isin(author_df['DOI'])]
+        if search_df.shape[0] == 0:
+            st.markdown('Nothing found')
+        else:
+            show_search_results(search_df)
+
 elif page == "☀️  Phototoxicity":
 
     _MONO = "DM Mono, monospace"

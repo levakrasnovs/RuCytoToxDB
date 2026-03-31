@@ -783,9 +783,23 @@ if page == "🔍  Search complexes":
     st.markdown(bars_html, unsafe_allow_html=True)
 
     # ── Search bar ───────────────────────────────────────────────────────────
-    # Use separate _home_smi_val key to avoid widget state conflict
-    if "_home_smi_val" not in st.session_state:
-        st.session_state["_home_smi_val"] = ""
+    # ── Examples (rendered BEFORE text_input so clicks set value first) ────────
+    _EXAMPLES = [
+        ("p-cymene · Cl⁻", "Cc1ccc(C(C)C)cc1.[Cl-]"),
+        ("ppy", "[c-]1ccccc1-c1ccccn1"),
+        ("bpy", "c1ccc(-c2ccccn2)nc1"),
+        ("PPh3", "c1ccc(P(c2ccccc2)c2ccccc2)cc1"),
+        ("phen · phen", "c1cnc2c(c1)ccc1cccnc12.c1cnc2c(c1)ccc1cccnc12"),
+        ("Cp", "c1cc[cH-]c1"),
+        ("dfppy", "Fc1c[c-]c(-c2ccccn2)c(F)c1"),
+    ]
+
+    # Set widget value from example/clear clicks before widget renders
+    for i, (_, smi) in enumerate(_EXAMPLES):
+        if st.session_state.get(f"ex_{i}"):
+            st.session_state["home_smiles_input"] = smi
+    if st.session_state.get("home_clear"):
+        st.session_state["home_smiles_input"] = ""
 
     col_search, col_clear, col_draw, col_search_btn = st.columns([5, 0.4, 1, 1])
     with col_search:
@@ -794,13 +808,9 @@ if page == "🔍  Search complexes":
             placeholder='SMILES for ligand — use "." to combine multiple ligands',
             label_visibility="collapsed",
             key="home_smiles_input",
-            value=st.session_state["_home_smi_val"],
         )
-        st.session_state["_home_smi_val"] = home_smiles_input
     with col_clear:
-        if st.button("✕", use_container_width=True, key="home_clear"):
-            st.session_state["_home_smi_val"] = ""
-            st.rerun()
+        st.button("✕", use_container_width=True, key="home_clear")
     with col_draw:
         if st.button("✏ Draw", use_container_width=True):
             draw_structure_dialog()
@@ -808,7 +818,7 @@ if page == "🔍  Search complexes":
         st.button("🔍 Search", use_container_width=True, type="primary")
 
     # ── Structure preview ─────────────────────────────────────────────────────
-    preview_smi = st.session_state.get("_home_smi_val", "").strip()
+    preview_smi = home_smiles_input.strip()
     if preview_smi and Chem.MolFromSmiles(preview_smi):
         prev_col_img, prev_col_smi = st.columns([1, 6])
         with prev_col_img:
@@ -820,23 +830,11 @@ if page == "🔍  Search complexes":
                 unsafe_allow_html=True
             )
 
-    # ── Examples ─────────────────────────────────────────────────────────────
-    _EXAMPLES = [
-        ("p-cymene · Cl⁻", "Cc1ccc(C(C)C)cc1.[Cl-]"),
-        ("ppy", "[c-]1ccccc1-c1ccccn1"),
-        ("bpy", "c1ccc(-c2ccccn2)nc1"),
-        ("PPh3", "c1ccc(P(c2ccccc2)c2ccccc2)cc1"),
-        ("phen · phen", "c1cnc2c(c1)ccc1cccnc12.c1cnc2c(c1)ccc1cccnc12"),
-        ("Cp", "c1cc[cH-]c1"),
-        ("dfppy", "Fc1c[c-]c(-c2ccccn2)c(F)c1"),
-    ]
     st.markdown('<span style="font-family:DM Mono,monospace;font-size:0.65rem;color:#4a5568;">Try search with popular ligands:</span>', unsafe_allow_html=True)
     ex_cols = st.columns(len(_EXAMPLES))
-    for i, (label, smi) in enumerate(_EXAMPLES):
+    for i, (label, _) in enumerate(_EXAMPLES):
         with ex_cols[i]:
-            if st.button(label, key=f"ex_{i}", use_container_width=True):
-                st.session_state["_home_smi_val"] = smi
-                st.rerun()
+            st.button(label, key=f"ex_{i}", use_container_width=True)
 
     # ── Search regime ─────────────────────────────────────────────────────────
     home_scaffold = st.radio(
@@ -853,7 +851,7 @@ if page == "🔍  Search complexes":
 
     # ── Run search ────────────────────────────────────────────────────────────
     ascending = home_sorting == "Most cytotoxic above"
-    query_smi = st.session_state.get('_home_smi_val', '').strip()
+    query_smi = home_smiles_input.strip()
     has_smiles = bool(query_smi)
 
     if has_smiles:
