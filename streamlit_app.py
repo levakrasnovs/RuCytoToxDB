@@ -838,7 +838,7 @@ if page == "🔍  Search complexes":
 
     # ── Search regime ─────────────────────────────────────────────────────────
     home_scaffold = st.radio(
-        "", ["Full molecule match", "Scaffold-based search"],
+        "", ["Full molecule match", "Scaffold-based search", "Substructure search"],
         index=0, horizontal=True, key="home_scaffold", label_visibility="collapsed"
     )
 
@@ -864,10 +864,24 @@ if page == "🔍  Search complexes":
                 search_df = df[df["SMILES_Ligands"].apply(
                     lambda x: all(s in x.split(".") for s in smiles_inputs)
                 )].sort_values(by="SMILES_Ligands")
-            else:
+            elif home_scaffold == "Scaffold-based search":
                 smiles_inputs = [get_murcko_scaffold(s) if get_murcko_scaffold(s) != "" else s for s in smiles_inputs]
                 search_df = df[df["Scaffold"].apply(
                     lambda x: all(s in x.split(".") for s in smiles_inputs)
+                )].sort_values(by="SMILES_Ligands")
+            else:
+                # Substructure search
+                query_mols = [Chem.MolFromSmiles(s) for s in smiles_inputs]
+                query_mols = [m for m in query_mols if m is not None]
+                def has_all_substructures(smiles_ligands, qmols):
+                    parts = [Chem.MolFromSmiles(s) for s in smiles_ligands.split(".")]
+                    parts = [p for p in parts if p is not None]
+                    for qmol in qmols:
+                        if not any(p.HasSubstructMatch(qmol) for p in parts):
+                            return False
+                    return True
+                search_df = df[df["SMILES_Ligands"].apply(
+                    lambda x: has_all_substructures(x, query_mols)
                 )].sort_values(by="SMILES_Ligands")
             if home_metal != "All metals":
                 search_df = search_df[search_df["Metal"] == home_metal]
@@ -973,7 +987,7 @@ elif page == "☀️  Phototoxicity":
         st.button("🔍 Search", key="pt_search_btn", use_container_width=True, type="primary")
 
     pt_scaffold = st.radio(
-        "", ["Full molecule match", "Scaffold-based search"],
+        "", ["Full molecule match", "Scaffold-based search", "Substructure search"],
         index=0, horizontal=True, key="pt_scaffold", label_visibility="collapsed"
     )
 
@@ -999,10 +1013,16 @@ elif page == "☀️  Phototoxicity":
                 fdf = fdf[fdf["SMILES_Ligands"].apply(
                     lambda x: all(s in x.split(".") for s in pt_smiles_inputs)
                 )]
-            else:
+            elif pt_scaffold == "Scaffold-based search":
                 pt_smiles_inputs = [get_murcko_scaffold(s) if get_murcko_scaffold(s) != "" else s for s in pt_smiles_inputs]
                 fdf = fdf[fdf["Scaffold"].apply(
                     lambda x: all(s in x.split(".") for s in pt_smiles_inputs)
+                )]
+            else:
+                pt_query_mols = [Chem.MolFromSmiles(s) for s in pt_smiles_inputs]
+                pt_query_mols = [m for m in pt_query_mols if m is not None]
+                fdf = fdf[fdf["SMILES_Ligands"].apply(
+                    lambda x: has_all_substructures(x, pt_query_mols)
                 )]
     if pt_metal != "All metals":
         fdf = fdf[fdf["Metal"] == pt_metal]
