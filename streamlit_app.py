@@ -351,7 +351,12 @@ if "visibility" not in st.session_state:
     st.session_state.visibility = "visible"
     st.session_state.disabled = False
 
-st.set_page_config(page_title='MetalCytoToxDB', layout="wide")
+st.set_page_config(
+    page_title='MetalCytoToxDB',
+    page_icon='🧪',
+    layout='wide',
+    initial_sidebar_state='expanded',
+)
 
 # ─── CSS ──────────────────────────────────────────────────────────────────────
 def inject_css():
