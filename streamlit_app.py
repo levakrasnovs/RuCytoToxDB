@@ -116,7 +116,7 @@ def _render_lines_table(rows_df, metal_color, global_min_ic50=None):
             f"<td style='font-family:\"DM Mono\",monospace;font-size:0.75rem;color:#8892a4;"
             f"padding:5px 8px 5px 0;border-bottom:1px solid rgba(255,255,255,0.04);'>{dot}{cell_val}</td>"
             f"<td style='font-family:\"DM Mono\",monospace;font-size:0.75rem;color:#8892a4;"
-            f"padding:5px 8px 5px 0;border-bottom:1px solid rgba(255,255,255,0.04);'>{int(time_val)}h</td>"
+            f"padding:5px 8px 5px 0;border-bottom:1px solid rgba(255,255,255,0.04);'>{int(time_val) if not pd.isna(time_val) else '—'}h</td>"
             f"<td style='font-family:\"Syne\",sans-serif;font-size:0.9rem;font-weight:700;"
             f"color:{ic50_color};padding:5px 8px 5px 0;border-bottom:1px solid rgba(255,255,255,0.04);'>{format_ic50(ic50_val)}</td>"
             f"<td style='font-family:\"DM Mono\",monospace;font-size:0.75rem;color:{cis_color};"
@@ -131,6 +131,41 @@ def _render_lines_table(rows_df, metal_color, global_min_ic50=None):
         )
 
     return header + rows_html + "</tbody></table>"
+
+
+@st.cache_data
+def run_ligand_search(query_smi, scaffold_mode, metal, line, time_val):
+    """Cached ligand search — only reruns when inputs change."""
+    smiles_inputs = [canonize_smiles(s) for s in query_smi.split(".") if s]
+
+    if scaffold_mode == "Full molecule match":
+        result = df[df["SMILES_Ligands"].apply(
+            lambda x: all(s in x.split(".") for s in smiles_inputs)
+        )].sort_values(by="SMILES_Ligands")
+    elif scaffold_mode == "Scaffold-based search":
+        scaffolds = [get_murcko_scaffold(s) if get_murcko_scaffold(s) != "" else s for s in smiles_inputs]
+        result = df[df["Scaffold"].apply(
+            lambda x: all(s in x.split(".") for s in scaffolds)
+        )].sort_values(by="SMILES_Ligands")
+    else:
+        def _has_sub(smiles_ligands):
+            qmols = [Chem.MolFromSmiles(s) for s in smiles_inputs]
+            qmols = [m for m in qmols if m is not None]
+            parts = [Chem.MolFromSmiles(s) for s in smiles_ligands.split(".")]
+            parts = [p for p in parts if p is not None]
+            for qmol in qmols:
+                if not any(p.HasSubstructMatch(qmol) for p in parts):
+                    return False
+            return True
+        result = df[df["SMILES_Ligands"].apply(_has_sub)].sort_values(by="SMILES_Ligands")
+
+    if metal != "All metals":
+        result = result[result["Metal"] == metal]
+    if line != "All cell lines":
+        result = result[result["Cell_line"] == line]
+    if time_val != "All time ranges":
+        result = result[result["Time(h)"] == float(time_val)]
+    return result
 
 
 def render_metal_bars(counts, total, metal_clr):
@@ -346,6 +381,7 @@ def inject_css():
     #MainMenu, footer, [data-testid="stToolbar"] { display: none !important; }
     [data-testid="stDecoration"] { display: none !important; }
     [data-testid="stSidebarCollapseButton"] { display: none !important; }
+    [data-testid="stCacheSpinner"], .stCacheSpinner { display: none !important; }
 
     /* ── Sidebar ── */
     [data-testid="stSidebar"] {
@@ -919,43 +955,23 @@ if page == "🔍  Search complexes":
         if mol is None:
             st.error("Invalid SMILES — please check your input.")
         else:
-            smiles_inputs = [canonize_smiles(s) for s in query_smi.split(".") if s]
+            _cache_key = (query_smi, home_scaffold, home_metal, home_line, home_time)
+            _is_cached = st.session_state.get("_last_search_key") == _cache_key
             _spinner_msg = {
                 "Full molecule match": "Searching...",
                 "Scaffold-based search": "Computing scaffolds...",
                 "Substructure search": "Running substructure search...",
             }.get(home_scaffold, "Searching...")
-
-            with st.spinner(_spinner_msg):
-                if home_scaffold == "Full molecule match":
-                    search_df = df[df["SMILES_Ligands"].apply(
-                        lambda x: all(s in x.split(".") for s in smiles_inputs)
-                    )].sort_values(by="SMILES_Ligands")
-                elif home_scaffold == "Scaffold-based search":
-                    smiles_inputs = [get_murcko_scaffold(s) if get_murcko_scaffold(s) != "" else s for s in smiles_inputs]
-                    search_df = df[df["Scaffold"].apply(
-                        lambda x: all(s in x.split(".") for s in smiles_inputs)
-                    )].sort_values(by="SMILES_Ligands")
-                else:
-                    # Substructure search
-                    query_mols = [Chem.MolFromSmiles(s) for s in smiles_inputs]
-                    query_mols = [m for m in query_mols if m is not None]
-                    def has_all_substructures(smiles_ligands, qmols):
-                        parts = [Chem.MolFromSmiles(s) for s in smiles_ligands.split(".")]
-                        parts = [p for p in parts if p is not None]
-                        for qmol in qmols:
-                            if not any(p.HasSubstructMatch(qmol) for p in parts):
-                                return False
-                        return True
-                    search_df = df[df["SMILES_Ligands"].apply(
-                        lambda x: has_all_substructures(x, query_mols)
-                    )].sort_values(by="SMILES_Ligands")
-            if home_metal != "All metals":
-                search_df = search_df[search_df["Metal"] == home_metal]
-            if home_line != "All cell lines":
-                search_df = search_df[search_df["Cell_line"] == home_line]
-            if home_time != "All time ranges":
-                search_df = search_df[search_df["Time(h)"] == float(home_time)]
+            if _is_cached:
+                search_df = run_ligand_search(
+                    query_smi, home_scaffold, home_metal, home_line, home_time
+                )
+            else:
+                with st.spinner(_spinner_msg):
+                    search_df = run_ligand_search(
+                        query_smi, home_scaffold, home_metal, home_line, home_time
+                    )
+                st.session_state["_last_search_key"] = _cache_key
             if search_df.shape[0] == 0:
                 st.markdown("Nothing found")
             else:
