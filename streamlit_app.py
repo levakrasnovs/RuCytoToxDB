@@ -110,7 +110,7 @@ def _render_lines_table(rows_df, metal_color, global_min_ic50=None):
 
 
 @st.cache_data
-def run_ligand_search(query_smi, scaffold_mode, metal, line, time_val):
+def run_ligand_search(query_smi, scaffold_mode, metal, line, time_val, tanimoto_threshold=0.7):
     """Cached ligand search — only reruns when inputs change."""
     smiles_inputs = [canonize_smiles(s) for s in query_smi.split(".") if s]
 
@@ -123,6 +123,22 @@ def run_ligand_search(query_smi, scaffold_mode, metal, line, time_val):
         result = df[df["Scaffold"].apply(
             lambda x: all(s in x.split(".") for s in scaffolds)
         )].sort_values(by="SMILES_Ligands")
+    elif scaffold_mode == "Similarity search":
+        from rdkit.DataStructs import TanimotoSimilarity
+        from rdkit.Chem import RDKFingerprint as _RDKFingerprint2
+        query_mol = Chem.MolFromSmiles(query_smi)
+        if query_mol is None:
+            return df.iloc[0:0]
+        query_fp = _RDKFingerprint2(query_mol)
+        def _max_tanimoto(smiles_ligands):
+            fps = _ligand_fps.get(smiles_ligands)
+            if not fps:
+                return 0.0
+            return max(TanimotoSimilarity(query_fp, fp) for fp in fps)
+        similarities = df["SMILES_Ligands"].apply(_max_tanimoto)
+        result = df[similarities >= tanimoto_threshold].copy()
+        result["_similarity"] = similarities[result.index]
+        result = result.sort_values("_similarity", ascending=False).drop(columns=["_similarity"])
     else:
         def _has_sub(smiles_ligands):
             qmols = [Chem.MolFromSmiles(s) for s in smiles_inputs]
@@ -630,6 +646,27 @@ line_list = df['Cell_line'].value_counts().nlargest(50).index.tolist()
 time_list = [int(t) for t in df['Time(h)'].value_counts().nlargest(6).index.tolist()]
 metal_list = df['Metal'].value_counts().index.tolist()
 
+# ── Load precomputed per-ligand RDKit fingerprints ───────────────────────
+import pickle as _pickle
+from rdkit.Chem import RDKFingerprint as _RDKFingerprint
+try:
+    with open('ligand_fps.pkl', 'rb') as _f:
+        _ligand_fps = _pickle.load(_f)
+except FileNotFoundError:
+    # Fallback: compute on the fly if pkl not found
+    def _precompute_fps(df):
+        fps = {}
+        for smi in df['SMILES_Ligands'].unique():
+            lig_fps = []
+            for part in smi.split('.'):
+                mol = Chem.MolFromSmiles(part)
+                if mol is not None:
+                    lig_fps.append(_RDKFingerprint(mol))
+            if lig_fps:
+                fps[smi] = lig_fps
+        return fps
+    _ligand_fps = _precompute_fps(df)
+
 # Light toxicity subset
 light_df = df[df['IC50_Light(M*10^-6)'].notna()].copy()
 light_df['IC50_Light_value'] = pd.to_numeric(light_df['IC50_Light(M*10^-6)'], errors='coerce')
@@ -909,16 +946,28 @@ if page == "🔍  Search complexes":
 
     # ── Search regime ─────────────────────────────────────────────────────────
     home_scaffold = st.radio(
-        "", ["Full molecule match", "Scaffold-based search", "Substructure search"],
+        "", ["Full molecule match", "Scaffold-based search", "Substructure search", "Similarity search"],
         index=0, horizontal=True, key="home_scaffold", label_visibility="collapsed"
     )
 
+    # ── Tanimoto threshold (only for similarity search) ──────────────────────
+    if home_scaffold == "Similarity search":
+        home_tanimoto = st.slider(
+            "Tanimoto similarity threshold", min_value=0.3, max_value=1.0,
+            value=0.7, step=0.05, key="home_tanimoto",
+            format="%.2f"
+        )
+    else:
+        home_tanimoto = 0.7
+
     # ── Search filters ───────────────────────────────────────────────────────
-    col1f, col2f, col3f, col4f = st.columns(4)
-    home_metal   = col1f.selectbox("Metal",         ["All metals"] + metal_list, index=0, key="home_metal")
-    home_line    = col2f.selectbox("Cell line",     ["All cell lines"] + line_list, index=0, key="home_line")
-    home_time    = col3f.selectbox("Exposure time", ["All time ranges"] + time_list, index=0, key="home_time")
-    home_sorting = col4f.selectbox("Sorting", ["Most cytotoxic above", "Least cytotoxic above", "Newest first", "Oldest first"], index=0, key="home_sorting")
+    col1f, col2f, col3f, col4f, col5f, col6f = st.columns(6)
+    home_metal    = col1f.selectbox("Metal",          ["All metals"] + metal_list, index=0, key="home_metal")
+    home_line     = col2f.selectbox("Cell line",      ["All cell lines"] + line_list, index=0, key="home_line")
+    home_time     = col3f.selectbox("Exposure time",  ["All time ranges"] + time_list, index=0, key="home_time")
+    home_ic50_min = col4f.number_input("IC₅₀ min, μM", min_value=0.0, step=1.0, value=None, placeholder="e.g. 0", format="%.4g", key="home_ic50_min")
+    home_ic50_max = col5f.number_input("IC₅₀ max, μM", min_value=0.0, step=1.0, value=None, placeholder="e.g. 10", format="%.4g", key="home_ic50_max")
+    home_sorting  = col6f.selectbox("Sorting",        ["Most cytotoxic above", "Least cytotoxic above", "Newest first", "Oldest first"], index=0, key="home_sorting")
 
     # ── Run search ────────────────────────────────────────────────────────────
     sort_by_year = home_sorting in ("Newest first", "Oldest first")
@@ -945,7 +994,7 @@ if page == "🔍  Search complexes":
             }.get(home_scaffold, "Searching...")
             if _is_cached:
                 search_df = run_ligand_search(
-                    query_smi, home_scaffold, home_metal, home_line, home_time
+                    query_smi, home_scaffold, home_metal, home_line, home_time, home_tanimoto
                 )
             else:
                 with st.spinner(_spinner_msg):
@@ -953,6 +1002,10 @@ if page == "🔍  Search complexes":
                         query_smi, home_scaffold, home_metal, home_line, home_time
                     )
                 st.session_state["_last_search_key"] = _cache_key
+            if home_ic50_min is not None:
+                search_df = search_df[search_df["IC50_Dark_value"] >= home_ic50_min]
+            if home_ic50_max is not None:
+                search_df = search_df[search_df["IC50_Dark_value"] <= home_ic50_max]
             if search_df.shape[0] == 0:
                 st.markdown("Nothing found")
             else:
@@ -965,6 +1018,10 @@ if page == "🔍  Search complexes":
             search_df = search_df[search_df["Cell_line"] == home_line]
         if home_time != "All time ranges":
             search_df = search_df[search_df["Time(h)"] == float(home_time)]
+        if home_ic50_min is not None:
+            search_df = search_df[search_df["IC50_Dark_value"] >= home_ic50_min]
+        if home_ic50_max is not None:
+            search_df = search_df[search_df["IC50_Dark_value"] <= home_ic50_max]
         if sort_by_year:
             search_df = search_df.sort_values("Year", ascending=ascending)
         show_search_results(search_df, ascending=ascending, sort_by_year=sort_by_year)
