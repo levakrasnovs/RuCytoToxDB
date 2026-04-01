@@ -920,29 +920,36 @@ if page == "🔍  Search complexes":
             st.error("Invalid SMILES — please check your input.")
         else:
             smiles_inputs = [canonize_smiles(s) for s in query_smi.split(".") if s]
-            if home_scaffold == "Full molecule match":
-                search_df = df[df["SMILES_Ligands"].apply(
-                    lambda x: all(s in x.split(".") for s in smiles_inputs)
-                )].sort_values(by="SMILES_Ligands")
-            elif home_scaffold == "Scaffold-based search":
-                smiles_inputs = [get_murcko_scaffold(s) if get_murcko_scaffold(s) != "" else s for s in smiles_inputs]
-                search_df = df[df["Scaffold"].apply(
-                    lambda x: all(s in x.split(".") for s in smiles_inputs)
-                )].sort_values(by="SMILES_Ligands")
-            else:
-                # Substructure search
-                query_mols = [Chem.MolFromSmiles(s) for s in smiles_inputs]
-                query_mols = [m for m in query_mols if m is not None]
-                def has_all_substructures(smiles_ligands, qmols):
-                    parts = [Chem.MolFromSmiles(s) for s in smiles_ligands.split(".")]
-                    parts = [p for p in parts if p is not None]
-                    for qmol in qmols:
-                        if not any(p.HasSubstructMatch(qmol) for p in parts):
-                            return False
-                    return True
-                search_df = df[df["SMILES_Ligands"].apply(
-                    lambda x: has_all_substructures(x, query_mols)
-                )].sort_values(by="SMILES_Ligands")
+            _spinner_msg = {
+                "Full molecule match": "Searching...",
+                "Scaffold-based search": "Computing scaffolds...",
+                "Substructure search": "Running substructure search...",
+            }.get(home_scaffold, "Searching...")
+
+            with st.spinner(_spinner_msg):
+                if home_scaffold == "Full molecule match":
+                    search_df = df[df["SMILES_Ligands"].apply(
+                        lambda x: all(s in x.split(".") for s in smiles_inputs)
+                    )].sort_values(by="SMILES_Ligands")
+                elif home_scaffold == "Scaffold-based search":
+                    smiles_inputs = [get_murcko_scaffold(s) if get_murcko_scaffold(s) != "" else s for s in smiles_inputs]
+                    search_df = df[df["Scaffold"].apply(
+                        lambda x: all(s in x.split(".") for s in smiles_inputs)
+                    )].sort_values(by="SMILES_Ligands")
+                else:
+                    # Substructure search
+                    query_mols = [Chem.MolFromSmiles(s) for s in smiles_inputs]
+                    query_mols = [m for m in query_mols if m is not None]
+                    def has_all_substructures(smiles_ligands, qmols):
+                        parts = [Chem.MolFromSmiles(s) for s in smiles_ligands.split(".")]
+                        parts = [p for p in parts if p is not None]
+                        for qmol in qmols:
+                            if not any(p.HasSubstructMatch(qmol) for p in parts):
+                                return False
+                        return True
+                    search_df = df[df["SMILES_Ligands"].apply(
+                        lambda x: has_all_substructures(x, query_mols)
+                    )].sort_values(by="SMILES_Ligands")
             if home_metal != "All metals":
                 search_df = search_df[search_df["Metal"] == home_metal]
             if home_line != "All cell lines":
