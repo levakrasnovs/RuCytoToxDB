@@ -65,7 +65,7 @@ def check_ligands(mol1, mol2, mol3):
     else:
         return True
     
-def _render_lines_table(rows_df, metal_color):
+def _render_lines_table(rows_df, metal_color, global_min_ic50=None):
     """Render cell line rows as an HTML table inside a compound card."""
     _MONO = "DM Mono, monospace"
     _SYNE = "Syne, sans-serif"
@@ -89,7 +89,7 @@ def _render_lines_table(rows_df, metal_color):
     )
 
     rows_html = ""
-    min_ic50 = rows_df['IC50_Dark_value'].min()
+    min_ic50 = global_min_ic50 if global_min_ic50 is not None else rows_df['IC50_Dark_value'].min()
     for _, row in rows_df.iterrows():
         ic50_val = row['IC50_Dark(M*10^-6)']
         ic50_num = row['IC50_Dark_value']
@@ -118,7 +118,7 @@ def _render_lines_table(rows_df, metal_color):
             f"<td style='font-family:\"DM Mono\",monospace;font-size:0.75rem;color:#8892a4;"
             f"padding:5px 8px 5px 0;border-bottom:1px solid rgba(255,255,255,0.04);'>{int(time_val)}h</td>"
             f"<td style='font-family:\"Syne\",sans-serif;font-size:0.9rem;font-weight:700;"
-            f"color:{ic50_color};padding:5px 8px 5px 0;border-bottom:1px solid rgba(255,255,255,0.04);'>{ic50_val}</td>"
+            f"color:{ic50_color};padding:5px 8px 5px 0;border-bottom:1px solid rgba(255,255,255,0.04);'>{format_ic50(ic50_val)}</td>"
             f"<td style='font-family:\"DM Mono\",monospace;font-size:0.75rem;color:{cis_color};"
             f"padding:5px 8px 5px 0;border-bottom:1px solid rgba(255,255,255,0.04);'>{cis_str}</td>"
             f"<td style='padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);'>"
@@ -144,12 +144,37 @@ def render_metal_bars(counts, total, metal_clr):
     bars_html += '</div>'
     st.markdown(bars_html, unsafe_allow_html=True)
 
-def show_search_results(search_df, ascending=True):
+def format_ic50(val, show_unit=False):
+    """Format IC50 value: if < 0.01 μM, show in nM."""
+    try:
+        f = float(val)
+        if f < 0.01:
+            return f"{f * 1000:.2g} nM"
+        return f"{val} μM" if show_unit else str(val)
+    except (ValueError, TypeError):
+        return str(val)
+
+def show_search_results(search_df, ascending=True, sort_by_year=False, page_key="page_num"):
 
     # ── Summary bar ──────────────────────────────────────────────────────────
     num_complexes = search_df.drop_duplicates(subset=['SMILES_Ligands', 'Metal']).shape[0]
     num_ic50 = search_df.drop_duplicates(subset=['SMILES_Ligands', 'Counterion', 'IC50_Dark(M*10^-6)', 'Cell_line', 'Time(h)', 'DOI', 'Metal']).shape[0]
     num_sources = search_df['DOI'].nunique()
+
+    # Compute pagination info for summary bar
+    _PAGE_SIZE = 20
+    _total_pages = max(1, (num_complexes + _PAGE_SIZE - 1) // _PAGE_SIZE)
+    _cur_page = st.session_state.get(page_key, 0)
+    _showing_from = _cur_page * _PAGE_SIZE + 1
+    _showing_to = min((_cur_page + 1) * _PAGE_SIZE, num_complexes)
+    _paging_html = (
+        f"<div style='margin-left:auto;text-align:right;'>"
+        f"<div style='font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:0.1em;"
+        f"text-transform:uppercase;color:#4a5568;margin-bottom:3px;'>Showing</div>"
+        f"<div style='font-family:DM Mono,monospace;font-size:0.85rem;font-weight:500;color:#8892a4;'>"
+        f"{_showing_from}–{_showing_to} of {num_complexes}</div>"
+        f"</div>"
+    ) if num_complexes > _PAGE_SIZE else ""
 
     col_stats, col_csv = st.columns([5, 1])
     with col_stats:
@@ -177,6 +202,7 @@ def show_search_results(search_df, ascending=True):
                 <div style="font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;
                             color:#e8ecf4;">{num_sources}</div>
             </div>
+            {_paging_html}
         </div>
         """, unsafe_allow_html=True)
     with col_csv:
@@ -198,8 +224,23 @@ def show_search_results(search_df, ascending=True):
     grouped = search_df.groupby(['SMILES_Ligands', 'Metal'], sort=False)
 
     # Sort groups by min IC50 explicitly
-    group_min = search_df.groupby(['SMILES_Ligands', 'Metal'])['IC50_Dark_value'].min()
-    group_keys = group_min.sort_values(ascending=ascending).index.tolist()[:50]
+    # Sort groups by min IC50 or year, then paginate
+    if sort_by_year:
+        group_order = search_df.groupby(['SMILES_Ligands', 'Metal'])['Year'].max()
+        all_keys = group_order.sort_values(ascending=ascending).index.tolist()
+    else:
+        group_min = search_df.groupby(['SMILES_Ligands', 'Metal'])['IC50_Dark_value'].min()
+        all_keys = group_min.sort_values(ascending=ascending).index.tolist()
+
+    PAGE_SIZE = 20
+    total_pages = max(1, (len(all_keys) + PAGE_SIZE - 1) // PAGE_SIZE)
+    if page_key not in st.session_state:
+        st.session_state[page_key] = 0
+    if st.session_state[page_key] >= total_pages:
+        st.session_state[page_key] = 0
+    page_num = st.session_state[page_key]
+    group_keys = all_keys[page_num * PAGE_SIZE : (page_num + 1) * PAGE_SIZE]
+
 
     _ROMAN = {1: "I", 2: "II", 3: "III", 4: "IV", 5: "V", 6: "VI"}
 
@@ -232,6 +273,7 @@ def show_search_results(search_df, ascending=True):
         with col_data:
             # Header: metal(ox) badge + abbreviation + min IC50 + line count
             abbr_html = (
+                f"<span style='font-family:{_MONO};font-size:0.6rem;color:#4a5568;margin-right:2px;'>Name from article:</span>"
                 f"<span style='font-family:{_SYNE};font-size:1rem;font-weight:700;color:#e8ecf4;'>{abbr_val}</span>"
                 if abbr_val else ""
             )
@@ -239,25 +281,42 @@ def show_search_results(search_df, ascending=True):
                 f"<div style='display:flex;align-items:center;gap:12px;margin-bottom:4px;flex-wrap:wrap;'>"
                 f"<span style='font-family:{_MONO};font-size:0.75rem;font-weight:600;"
                 f"padding:3px 8px;border-radius:4px;background:{metal_color}18;color:{metal_color};'>{metal}{ox_str}</span>"
-                f"{abbr_html}"
-                f"<span style='font-family:{_SYNE};font-size:1.2rem;font-weight:800;color:#e8ecf4;'>{min_ic50:.2f} μM</span>"
+                f"<span style='font-family:{_SYNE};font-size:1.2rem;font-weight:800;color:#e8ecf4;'>{format_ic50(min_ic50, show_unit=True)}</span>"
                 f"<span style='font-family:{_MONO};font-size:0.65rem;color:#4a5568;'>min IC&#8325;&#8320; · {n_lines} cell line{'s' if n_lines > 1 else ''}</span>"
                 f"</div>"
-                f"<div style='font-family:{_MONO};font-size:0.65rem;color:#4a5568;word-break:break-all;margin-bottom:4px;'>{smi}</div>",
+                + (f"<div style='margin-bottom:3px;'>{abbr_html}</div>" if abbr_val else "")
+                + f"<div style='font-family:{_MONO};font-size:0.65rem;color:#4a5568;word-break:break-all;margin-bottom:4px;'>{smi}</div>",
                 unsafe_allow_html=True
             )
 
             # Top-3 rows always visible
+            group_min_ic50 = group['IC50_Dark_value'].min()
             top3 = group.head(3)
-            st.markdown(_render_lines_table(top3, metal_color), unsafe_allow_html=True)
+            st.markdown(_render_lines_table(top3, metal_color, global_min_ic50=group_min_ic50), unsafe_allow_html=True)
 
             # Remaining rows under expander
             rest = group.iloc[3:]
             if len(rest) > 0:
                 with st.expander(f"Show {len(rest)} more"):
-                    st.markdown(_render_lines_table(rest, metal_color), unsafe_allow_html=True)
+                    st.markdown(_render_lines_table(rest, metal_color, global_min_ic50=group_min_ic50), unsafe_allow_html=True)
 
         st.markdown("<div style='height:1px;background:rgba(255,255,255,0.06);margin:8px 0;'></div>", unsafe_allow_html=True)
+
+    # ── Pagination ────────────────────────────────────────────────────────────
+    if total_pages > 1:
+        st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
+        col_prev, col_info, col_next = st.columns([1, 2, 1])
+        if col_prev.button("← Previous", key=f"{page_key}_prev", disabled=(page_num == 0), use_container_width=True):
+            st.session_state[page_key] -= 1
+            st.rerun()
+        col_info.markdown(
+            f'<div style="text-align:center;font-family:DM Mono,monospace;font-size:0.75rem;color:#4a5568;padding-top:8px;">'
+            f'Page {page_num + 1} of {total_pages}</div>',
+            unsafe_allow_html=True
+        )
+        if col_next.button("Next →", key=f"{page_key}_next", disabled=(page_num >= total_pages - 1), use_container_width=True):
+            st.session_state[page_key] += 1
+            st.rerun()
 
 calc = FPCalculator("ecfp")
 
@@ -847,10 +906,11 @@ if page == "🔍  Search complexes":
     home_metal   = col1f.selectbox("Metal",         ["All metals"] + metal_list, index=0, key="home_metal")
     home_line    = col2f.selectbox("Cell line",     ["All cell lines"] + line_list, index=0, key="home_line")
     home_time    = col3f.selectbox("Exposure time", ["All time ranges"] + time_list, index=0, key="home_time")
-    home_sorting = col4f.selectbox("Sorting",       ["Most cytotoxic above", "Least cytotoxic above"], index=0, key="home_sorting")
+    home_sorting = col4f.selectbox("Sorting", ["Most cytotoxic above", "Least cytotoxic above", "Newest first", "Oldest first"], index=0, key="home_sorting")
 
     # ── Run search ────────────────────────────────────────────────────────────
-    ascending = home_sorting == "Most cytotoxic above"
+    sort_by_year = home_sorting in ("Newest first", "Oldest first")
+    ascending = (home_sorting == "Most cytotoxic above") if not sort_by_year else (home_sorting == "Oldest first")
     query_smi = home_smiles_input.strip()
     has_smiles = bool(query_smi)
 
@@ -892,7 +952,7 @@ if page == "🔍  Search complexes":
             if search_df.shape[0] == 0:
                 st.markdown("Nothing found")
             else:
-                show_search_results(search_df, ascending=ascending)
+                show_search_results(search_df, ascending=ascending, sort_by_year=sort_by_year)
     else:
         search_df = df.copy()
         if home_metal != "All metals":
@@ -901,7 +961,9 @@ if page == "🔍  Search complexes":
             search_df = search_df[search_df["Cell_line"] == home_line]
         if home_time != "All time ranges":
             search_df = search_df[search_df["Time(h)"] == float(home_time)]
-        show_search_results(search_df, ascending=ascending)
+        if sort_by_year:
+            search_df = search_df.sort_values("Year", ascending=ascending)
+        show_search_results(search_df, ascending=ascending, sort_by_year=sort_by_year)
 
 
 
@@ -1105,7 +1167,8 @@ elif page == "☀️  Phototoxicity":
 
         pi_color = "#3de8a0" if (not pd.isna(max_pi) and max_pi >= 10) else "#fbbf24" if (not pd.isna(max_pi) and max_pi >= 2) else "#e8ecf4"
         pi_str = f"{max_pi:.1f}" if not pd.isna(max_pi) else "—"
-        abbr_html = f"<span style='font-family:{_SYNE};font-size:1rem;font-weight:700;color:#e8ecf4;'>{abbr_val}</span>" if abbr_val else ""
+        abbr_html = (f"<span style='font-family:{_MONO};font-size:0.6rem;color:#4a5568;margin-right:2px;'>Name from article:</span>"
+                      f"<span style='font-family:{_SYNE};font-size:1rem;font-weight:700;color:#e8ecf4;'>{abbr_val}</span>") if abbr_val else ""
 
         col_img, col_data = st.columns([1, 4])
         with col_img:
@@ -1115,13 +1178,13 @@ elif page == "☀️  Phototoxicity":
                 f"<div style='display:flex;align-items:center;gap:12px;margin-bottom:4px;flex-wrap:wrap;'>"
                 f"<span style='font-family:{_MONO};font-size:0.75rem;font-weight:600;"
                 f"padding:3px 8px;border-radius:4px;background:{metal_color}18;color:{metal_color};'>{metal}{ox_str}</span>"
-                f"{abbr_html}"
                 f"<span style='font-family:{_SYNE};font-size:1.2rem;font-weight:800;color:#e8ecf4;'>{min_light:.2f} μM</span>"
                 f"<span style='font-family:{_MONO};font-size:0.65rem;color:#4a5568;'>IC&#8325;&#8320;(light) min</span>"
                 f"<span style='font-family:{_MONO};font-size:0.85rem;font-weight:600;color:{pi_color};'>PI {pi_str}</span>"
                 f"<span style='font-family:{_MONO};font-size:0.65rem;color:#4a5568;'>· {n_lines} cell line{'s' if n_lines > 1 else ''}</span>"
                 f"</div>"
-                f"<div style='font-family:{_MONO};font-size:0.65rem;color:#4a5568;word-break:break-all;margin-bottom:4px;'>{smi}</div>",
+                + (f"<div style='margin-bottom:3px;'>{abbr_html}</div>" if abbr_val else "")
+                + f"<div style='font-family:{_MONO};font-size:0.65rem;color:#4a5568;word-break:break-all;margin-bottom:4px;'>{smi}</div>",
                 unsafe_allow_html=True
             )
 
