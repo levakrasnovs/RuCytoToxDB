@@ -1135,12 +1135,12 @@ elif page == "☀️  Phototoxicity":
         pt_tanimoto = 0.7
 
     # ── Filters ──────────────────────────────────────────────────────────────
-    col1f, col2f, col3f, col4f = st.columns(4)
+    col1f, col2f, col3f, col4f, col5f = st.columns(5)
     pt_metal   = col1f.selectbox("Metal",        ["All metals"] + metal_list, index=0, key="pt_metal")
     pt_line    = col2f.selectbox("Cell line",    ["All cell lines"] + line_list, index=0, key="pt_line")
     pt_pi_min  = col3f.selectbox("Min PI",       ["Any", "≥2", "≥5", "≥10", "≥50"], index=0, key="pt_pi_min")
     pt_sorting = col4f.selectbox("Sorting",      ["Highest PI first", "Lowest IC₅₀(light) first"], index=0, key="pt_sorting")
-    pt_time = "All time ranges"
+    pt_time    = col5f.selectbox("Exposure time",["All time ranges"] + time_list, index=0, key="pt_time")
 
     # ── Filter light_df ───────────────────────────────────────────────────────
     pt_query = st.session_state.get("_pt_smi_val", "").strip()
