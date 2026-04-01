@@ -41,30 +41,6 @@ def draw_molecule(smiles, size=(300, 300)):
 def canonize_smiles(smiles):
     return Chem.MolToSmiles(Chem.MolFromSmiles(smiles))
 
-def check_ligands(mol1, mol2, mol3):
-    allowed_atoms = ["C", "O", "N", "H", "Cl", "F", "S", "P"]
-    def contains_only_allowed_atoms(mol):
-        return any(atom.GetSymbol() not in allowed_atoms for atom in mol.GetAtoms())
-
-    canonize_l1 = Chem.MolToSmiles(mol1)
-    canonize_l2 = Chem.MolToSmiles(mol2)
-    canonize_l3 = Chem.MolToSmiles(mol3)
-
-    if (len(mol1.GetAtoms()) < 6) | (len(mol2.GetAtoms()) < 6) | (len(mol3.GetAtoms()) < 6):
-        st.error("Only ligands with more than 5 atoms are available for input.")
-        return False
-    elif (contains_only_allowed_atoms(mol1) | contains_only_allowed_atoms(mol2) | contains_only_allowed_atoms(mol3)):
-        st.error("The model can predict molecules containing atoms: C, O, N, Cl, F, S, P.")
-        return False
-    elif ('[c-]' not in canonize_l1) | ('[c-]' not in canonize_l2):
-        st.error("The complex should contain TWO cyclometalated ligands, i.e. TWO ligands with deprotonated carbon as L1 and L2.")
-        return False
-    elif canonize_l1 == canonize_l2 == canonize_l3:
-        st.error("The complex should contain TWO cyclometalated ligands, i.e. TWO ligands with deprotonated carbon as L1 and L2. Your query contains deprotonated carbon in the L3 section. Please correct it.")
-        return False
-    else:
-        return True
-    
 def _render_lines_table(rows_df, metal_color, global_min_ic50=None):
     """Render cell line rows as an HTML table inside a compound card."""
     _MONO = "DM Mono, monospace"
@@ -955,6 +931,11 @@ if page == "🔍  Search complexes":
         if mol is None:
             st.error("Invalid SMILES — please check your input.")
         else:
+            _metal_symbols = {'Ru', 'Ir', 'Os', 'Rh', 'Re'}
+            _atoms_in_query = {atom.GetSymbol() for atom in mol.GetAtoms()}
+            if _atoms_in_query & _metal_symbols:
+                _found = ', '.join(_atoms_in_query & _metal_symbols)
+                st.warning(f"⚠️ Your SMILES contains a metal atom ({_found}). Please enter ligand SMILES only — use the Metal filter above to filter by metal.")
             _cache_key = (query_smi, home_scaffold, home_metal, home_line, home_time)
             _is_cached = st.session_state.get("_last_search_key") == _cache_key
             _spinner_msg = {
