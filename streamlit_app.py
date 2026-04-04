@@ -90,7 +90,10 @@ def _render_lines_table(rows_df, metal_color, global_min_ic50=None):
         rows_html += (
             f"<tr>"
             f"<td style='font-family:\"DM Mono\",monospace;font-size:0.75rem;color:#8892a4;"
-            f"padding:5px 8px 5px 0;border-bottom:1px solid rgba(255,255,255,0.04);'>{dot}{cell_val}</td>"
+            f"padding:5px 8px 5px 0;border-bottom:1px solid rgba(255,255,255,0.04);'>"
+            f"{dot}{cell_val}"
+            + (f"<span style='font-family:DM Mono,monospace;font-size:0.6rem;color:#4a5568;margin-left:6px;'>" + _CELL_LINE_ORGAN[cell_val] + "</span>" if cell_val in _CELL_LINE_ORGAN else "")
+            + "</td>"
             f"<td style='font-family:\"DM Mono\",monospace;font-size:0.75rem;color:#8892a4;"
             f"padding:5px 8px 5px 0;border-bottom:1px solid rgba(255,255,255,0.04);'>{int(time_val) if not pd.isna(time_val) else '—'}h</td>"
             f"<td style='font-family:\"Syne\",sans-serif;font-size:0.9rem;font-weight:700;"
@@ -672,6 +675,380 @@ except FileNotFoundError:
         return fps
     _ligand_fps = _precompute_fps(df)
 
+_CELL_LINE_ORGAN = {
+    '143B': 'Bone',
+    '16HBE': 'Lung',
+    '1BR.3.G': 'Fibroblast/Connective',
+    '22Rv1': 'Prostate',
+    '4T1': 'Breast',
+    '518A2': 'Skin',
+    '5637': 'Bladder',
+    '8505C': 'Thyroid',
+    '95D': 'Lung',
+    'A172': 'Brain/CNS',
+    'A2058': 'Skin',
+    'A253': 'Salivary gland',
+    'A2780': 'Ovary',
+    'A2780-CP70': 'Ovary',
+    'A2780/ADR': 'Ovary',
+    'A2780TR': 'Ovary',
+    'A2780cisR': 'Ovary',
+    'A2780sens': 'Ovary',
+    'A375': 'Skin',
+    'A375P': 'Skin',
+    'A427': 'Lung',
+    'A431': 'Skin',
+    'A498': 'Kidney',
+    'A549': 'Lung',
+    'A549-TAX': 'Lung',
+    'A549R MCTSs': 'Lung',
+    'A549cisR': 'Lung',
+    'ACHN': 'Kidney',
+    'ADHF': 'Fibroblast/Connective',
+    'AGS': 'Stomach',
+    'ARPE-19': 'Eye',
+    'AsPC-1': 'Pancreas',
+    'B16': 'Skin',
+    'B16-F10': 'Skin',
+    'BALB/3T3': 'Fibroblast/Connective',
+    'BALB/3T3 clone A31': 'Fibroblast/Connective',
+    'BE': 'Lung',
+    'BEAS-2B': 'Lung',
+    'BEL-7402': 'Liver',
+    'BEL-7402cisR': 'Liver',
+    'BEL-7404': 'Liver',
+    'BEL-7404/CP20': 'Liver',
+    'BEL-7404R': 'Liver',
+    'BEL-7704': 'Liver',
+    'BGC823': 'Stomach',
+    'BGM': 'Kidney',
+    'BHK': 'Kidney',
+    'BHK-21': 'Kidney',
+    'BJ': 'Fibroblast/Connective',
+    'BT-474': 'Breast',
+    'BT549': 'Breast',
+    'BeWo': 'Lung',
+    'BxPC-3': 'Pancreas',
+    'C6': 'Brain/CNS',
+    'CA-M75': 'Colon',
+    'CAKI-1': 'Kidney',
+    'CAL-27': 'Oral/Head&Neck',
+    'CAPAN-1': 'Pancreas',
+    'CCD-1029Sk': 'Skin',
+    'CCD-1059Sk': 'Skin',
+    'CCD-18Co': 'Colon',
+    'CCD-19Co': 'Colon',
+    'CCD-841': 'Colon',
+    'CCD-841-CON': 'Colon',
+    'CCL228': 'Colon',
+    'CCRF-CEM': 'Blood',
+    'CEM': 'Blood',
+    'CFPAC': 'Pancreas',
+    'CFPAC-1': 'Pancreas',
+    'CH-1': 'Ovary',
+    'CH1/PA-1': 'Ovary',
+    'CHL-1': 'Skin',
+    'CHO': 'Ovary',
+    'CHO p-40': 'Ovary',
+    'CI80-13S': 'Lung',
+    'CNE': 'Nasopharynx',
+    'CNE-1': 'Nasopharynx',
+    'CNE-2': 'Nasopharynx',
+    'CNE-2Z': 'Nasopharynx',
+    'COLO-201': 'Colon',
+    'COLO-205': 'Colon',
+    'COLO-320': 'Colon',
+    'COLO-829': 'Colon',
+    'COV362': 'Ovary',
+    'CRL7687': 'Ovary',
+    'CT-26': 'Colon',
+    'CT-26 LUC': 'Colon',
+    'CaSki': 'Cervix',
+    'Caco-2': 'Colon',
+    'Capan-2': 'Pancreas',
+    'DAN-G': 'Pancreas',
+    'DLD-1': 'Colon',
+    'DU-145': 'Prostate',
+    'DU-145cisR': 'Prostate',
+    'EA.hy926': 'Endothelium/Vascular',
+    'EAC': 'Breast',
+    'EC-1': 'Esophagus',
+    'EC109': 'Esophagus',
+    'EC9706': 'Esophagus',
+    'ECRF24': 'Endothelium/Vascular',
+    'ES-2': 'Ovary',
+    'EVSA-T': 'Breast',
+    'Ect1/E6E7': 'Cervix',
+    'FaDu': 'Oral/Head&Neck',
+    'Fem-X': 'Skin',
+    'G361': 'Skin',
+    'GES-1': 'Stomach',
+    'GM07492A': 'Fibroblast/Connective',
+    'H23': 'Lung',
+    'H358': 'Lung',
+    'H460/MX20': 'Lung',
+    'H4IIE': 'Liver',
+    'H9c2': 'Heart',
+    'HBL-100': 'Breast',
+    'HCC1806': 'Breast',
+    'HCC1937': 'Breast',
+    'HCC38': 'Breast',
+    'HCC70': 'Breast',
+    'HCC827': 'Lung',
+    'HCEC': 'Eye',
+    'HCT-116': 'Colon',
+    'HCT-116 p53+/+': 'Colon',
+    'HCT-116 p53-/-': 'Colon',
+    'HCT-116(p53/ko)': 'Colon',
+    'HCT-116/Dox': 'Colon',
+    'HCT-116CD44+': 'Colon',
+    'HCT-116N': 'Colon',
+    'HCT-116O': 'Colon',
+    'HCT-116Ox': 'Colon',
+    'HCT-15': 'Colon',
+    'HCT-8': 'Colon',
+    'HDFa': 'Fibroblast/Connective',
+    'HEC-1-A': 'Endometrium/Uterus',
+    'HEK293': 'Kidney',
+    'HEK293T': 'Kidney',
+    'HEp-2': 'Larynx/Head&Neck',
+    'HFF': 'Fibroblast/Connective',
+    'HFF-1': 'Fibroblast/Connective',
+    'HFL-1': 'Lung',
+    'HGC-27': 'Stomach',
+    'HIO80': 'Ovary',
+    'HK-2': 'Kidney',
+    'HL-60/DR': 'Blood',
+    'HL-7702': 'Liver',
+    'HL60': 'Blood',
+    'HL60/adr': 'Blood',
+    'HL60/vinc': 'Blood',
+    'HLF': 'Liver',
+    'HMLER': 'Breast',
+    'HOF': 'Ovary',
+    'HOS': 'Bone',
+    'HPAF-II': 'Pancreas',
+    'HPL1D': 'Lung',
+    'HS683': 'Brain/CNS',
+    'HSAEC': 'Lung',
+    'HSC-3': 'Oral/Head&Neck',
+    'HT-1080': 'Fibroblast/Connective',
+    'HT-29': 'Colon',
+    'HUVEC': 'Endothelium/Vascular',
+    'HaCaT': 'Skin',
+    'HdFa': 'Fibroblast/Connective',
+    'HeLa': 'Cervix',
+    'HeLa S3': 'Cervix',
+    'HeLa229': 'Cervix',
+    'Hep3B': 'Liver',
+    'HepG2': 'Liver',
+    'Hs294T': 'Skin',
+    'Hs578T': 'Breast',
+    'Hs68': 'Fibroblast/Connective',
+    'Hs683': 'Brain/CNS',
+    'HuH-7': 'Liver',
+    'HuT78': 'Blood',
+    'ID8': 'Ovary',
+    'IGROV-1': 'Ovary',
+    'IMR-32': 'Brain/CNS',
+    'IMR-90': 'Lung',
+    'Ishikawa': 'Endometrium/Uterus',
+    'Jurkat': 'Blood',
+    'K-562': 'Blood',
+    'KATO III': 'Stomach',
+    'KB': 'Oral/Head&Neck',
+    'KB-1019N': 'Oral/Head&Neck',
+    'KB-3-1': 'Oral/Head&Neck',
+    'KB-C2': 'Oral/Head&Neck',
+    'KB-CV60': 'Oral/Head&Neck',
+    'KB-V1': 'Oral/Head&Neck',
+    'KB-V1/Vbl': 'Oral/Head&Neck',
+    'KB/ATO': 'Oral/Head&Neck',
+    'KBC-1': 'Oral/Head&Neck',
+    'KBCP20': 'Oral/Head&Neck',
+    'KCP4': 'Ovary',
+    'KG-1': 'Blood',
+    'KG-1a': 'Blood',
+    'KMST-6': 'Fibroblast/Connective',
+    'KYSE-140': 'Esophagus',
+    'L-929': 'Fibroblast/Connective',
+    'L1210': 'Blood',
+    'L1210/0': 'Blood',
+    'L1210/2': 'Blood',
+    'L132': 'Lung',
+    'LA795': 'Lung',
+    'LCLC': 'Lung',
+    'LCLC-103H': 'Lung',
+    'LLC': 'Lung',
+    'LLC1': 'Lung',
+    'LN-18': 'Brain/CNS',
+    'LN229': 'Brain/CNS',
+    'LNCaP': 'Prostate',
+    'LNCaP-Clone-FGC': 'Prostate',
+    'LNZ308': 'Brain/CNS',
+    'LO2': 'Liver',
+    'LS 174T': 'Colon',
+    'LS-174': 'Colon',
+    'LoVo': 'Colon',
+    'LoVo/Dox': 'Colon',
+    'M-14': 'Skin',
+    'M19': 'Skin',
+    'M19-MEL': 'Skin',
+    'MAgEC 10.5': 'Stomach',
+    'MB49': 'Bladder',
+    'MCF-10A': 'Breast',
+    'MCF-12A': 'Breast',
+    'MCF-7': 'Breast',
+    'MCF-7/DOX': 'Breast',
+    'MCF-7/Topo': 'Breast',
+    'MCF-7CR': 'Breast',
+    'MDA-MB-134-VI': 'Breast',
+    'MDA-MB-216': 'Breast',
+    'MDA-MB-231': 'Breast',
+    'MDA-MB-231/Adr': 'Breast',
+    'MDA-MB-361': 'Breast',
+    'MDA-MB-435': 'Breast',
+    'MDA-MB-435S': 'Breast',
+    'MDA-MB-436': 'Breast',
+    'MDA-MB-453': 'Breast',
+    'MDA-MB-468': 'Breast',
+    'MDBK': 'Kidney',
+    'MDCK': 'Kidney',
+    'ME-180': 'Cervix',
+    'MES-SA': 'Endometrium/Uterus',
+    'MES-SA/Dx5': 'Endometrium/Uterus',
+    'MG-63': 'Bone',
+    'MGC-803': 'Stomach',
+    'MIA PaCa-2': 'Pancreas',
+    'MIA PaCa-2cisR': 'Pancreas',
+    'ML2': 'Blood',
+    'MLuMEC': 'Breast',
+    'MM418c5': 'Skin',
+    'MM96L': 'Skin',
+    'MO59J': 'Brain/CNS',
+    'MOLM-13': 'Blood',
+    'MOLT-4': 'Blood',
+    'MOR': 'Blood',
+    'MOR/CPR': 'Blood',
+    'MRC-5': 'Lung',
+    'MRC5pd30': 'Lung',
+    'MS1': 'Endothelium/Vascular',
+    'Molt4/C8': 'Blood',
+    'NALM6': 'Blood',
+    'NB4': 'Blood',
+    'NCI-H1299': 'Lung',
+    'NCI-H1975': 'Lung',
+    'NCI-H226': 'Lung',
+    'NCI-H292': 'Lung',
+    'NCI-H295R': 'Adrenal/Neuroendocrine',
+    'NCI-H460': 'Lung',
+    'NCI-N87': 'Stomach',
+    'NCM460': 'Colon',
+    'NFF': 'Fibroblast/Connective',
+    'NHDF': 'Fibroblast/Connective',
+    'NIH-3T3': 'Fibroblast/Connective',
+    'NP69': 'Nasopharynx',
+    'Neuro-2a': 'Brain/CNS',
+    'OE19': 'Esophagus',
+    'OE21': 'Esophagus',
+    'OE33': 'Esophagus',
+    'OSE': 'Ovary',
+    'OVCAR-3': 'Ovary',
+    'OVCAR-4': 'Ovary',
+    'OVCAR-5': 'Ovary',
+    'OVCAR-8': 'Ovary',
+    'PANC-1': 'Pancreas',
+    'PANC-10-05': 'Pancreas',
+    'PBMC': 'Blood',
+    'PBMCs': 'Blood',
+    'PC-12': 'Adrenal/Neuroendocrine',
+    'PC-3': 'Prostate',
+    'PNT1A': 'Prostate',
+    'PNT2': 'Prostate',
+    'PSN1': 'Pancreas',
+    'PT45': 'Pancreas',
+    'RAW 264.7': 'Blood/Immune',
+    'RD': 'Muscle',
+    'RDM4': 'Blood',
+    'REH': 'Blood',
+    'RKO': 'Colon',
+    'RPE-1': 'Eye',
+    'RPMI-8226': 'Blood',
+    'RT-112': 'Bladder',
+    'RT112': 'Bladder',
+    'RT112 cP': 'Bladder',
+    'S180': 'Connective tissue',
+    'SCC-25': 'Oral/Head&Neck',
+    'SCC-4': 'Oral/Head&Neck',
+    'SCC-9': 'Oral/Head&Neck',
+    'SF-268': 'Brain/CNS',
+    'SGC-7901': 'Stomach',
+    'SGC-7901/DDP': 'Stomach',
+    'SH-SY5Y': 'Brain/CNS',
+    'SISO': 'Cervix',
+    'SK-BR-3': 'Breast',
+    'SK-Hep1': 'Liver',
+    'SK-MEL-147': 'Skin',
+    'SK-MEL-28': 'Skin',
+    'SK-MEL-5': 'Skin',
+    'SK-Mel-103': 'Skin',
+    'SK-OV-3': 'Ovary',
+    'SK-OV-3cisR': 'Ovary',
+    'SKMel2': 'Skin',
+    'SKOV/Pt': 'Ovary',
+    'SMMC-7721': 'Liver',
+    'SNU-1': 'Stomach',
+    'SUNE1': 'Nasopharynx',
+    'SW480': 'Colon',
+    'SW480 ': 'Colon',
+    'SW620': 'Colon',
+    'SW620/AD300': 'Colon',
+    'SW620C': 'Colon',
+    'SW620D': 'Colon',
+    'SW620E': 'Colon',
+    'SW620M': 'Colon',
+    'SW620Mito': 'Colon',
+    'SW620V': 'Colon',
+    'SW626': 'Ovary',
+    'Saos-2': 'Bone',
+    'SiHa': 'Cervix',
+    'SiHa ': 'Cervix',
+    'Sk-mel': 'Skin',
+    'SkMel-29': 'Skin',
+    'T24': 'Bladder',
+    'T47D': 'Breast',
+    'T98G': 'Brain/CNS',
+    'THP-1': 'Blood',
+    'TK-10': 'Kidney',
+    'TS/A': 'Breast',
+    'Toledo': 'Blood',
+    'Toledo-cis': 'Blood',
+    'U-87 MG': 'Brain/CNS',
+    'U251': 'Brain/CNS',
+    'U266': 'Blood',
+    'U266B1': 'Blood',
+    'U2OS': 'Bone',
+    'U2OS/Pt': 'Bone',
+    'U373': 'Brain/CNS',
+    'U937': 'Blood',
+    'UACC-62': 'Skin',
+    'UWB1.289': 'Ovary',
+    'UWB1.289+BRCA1': 'Ovary',
+    'V79': 'Fibroblast/Connective',
+    'WI-38': 'Lung',
+    'WM115': 'Skin',
+    'WRL68': 'Liver',
+    'WiDr': 'Colon',
+    'cmt167': 'Lung',
+}
+
+_TISSUE_LIST = ['Adrenal/Neuroendocrine', 'Bladder', 'Blood', 'Blood/Immune', 'Bone',
+                'Brain/CNS', 'Breast', 'Cervix', 'Colon', 'Connective tissue',
+                'Endometrium/Uterus', 'Endothelium/Vascular', 'Esophagus', 'Eye',
+                'Fibroblast/Connective', 'Heart', 'Kidney', 'Larynx/Head&Neck', 'Liver',
+                'Lung', 'Muscle', 'Nasopharynx', 'Oral/Head&Neck', 'Ovary', 'Pancreas',
+                'Prostate', 'Salivary gland', 'Skin', 'Stomach', 'Thyroid']
+
 # Normal cell lines (manually annotated)
 _NORMAL_LINES = {'HEK293', 'MRC-5', 'LO2', 'BEAS-2B', 'MCF-10A', 'NIH-3T3', 'HEK293T',
                  'RPE-1', 'L-929', 'HL-7702', 'HLF', 'HaCaT', 'HUVEC', '16HBE', 'Vero',
@@ -974,13 +1351,15 @@ if page == "🔍  Search complexes":
         home_tanimoto = 0.7
 
     # ── Search filters ───────────────────────────────────────────────────────
-    col1f, col2f, col3f, col4f, col5f, col6f = st.columns(6)
+    col1f, col2f, col3f, col4f, col5f, col6f, col7f = st.columns(7)
     home_metal    = col1f.selectbox("Metal",          ["All metals"] + metal_list, index=0, key="home_metal")
-    home_line     = col2f.selectbox("Cell line",      ["All cell lines"] + line_list, index=0, key="home_line")
-    home_time     = col3f.selectbox("Exposure time",  ["All time ranges"] + time_list, index=0, key="home_time")
-    home_ic50_min = col4f.number_input("IC₅₀ min, μM", min_value=0.0, step=1.0, value=None, placeholder="e.g. 0", format="%.4g", key="home_ic50_min")
-    home_ic50_max = col5f.number_input("IC₅₀ max, μM", min_value=0.0, step=1.0, value=None, placeholder="e.g. 10", format="%.4g", key="home_ic50_max")
-    home_sorting  = col6f.selectbox("Sorting",        ["Most cytotoxic above", "Least cytotoxic above", "Newest first", "Oldest first"], index=0, key="home_sorting")
+    home_tissue   = col2f.selectbox("Tissue",         ["All tissues"] + _TISSUE_LIST, index=0, key="home_tissue")
+    _home_line_list = sorted([l for l, o in _CELL_LINE_ORGAN.items() if o == home_tissue]) if home_tissue != "All tissues" else line_list
+    home_line     = col3f.selectbox("Cell line",      ["All cell lines"] + _home_line_list, index=0, key="home_line")
+    home_time     = col4f.selectbox("Exposure time",  ["All time ranges"] + time_list, index=0, key="home_time")
+    home_ic50_min = col5f.number_input("IC₅₀ min, μM", min_value=0.0, step=1.0, value=None, placeholder="e.g. 0", format="%.4g", key="home_ic50_min")
+    home_ic50_max = col6f.number_input("IC₅₀ max, μM", min_value=0.0, step=1.0, value=None, placeholder="e.g. 10", format="%.4g", key="home_ic50_max")
+    home_sorting  = col7f.selectbox("Sorting",        ["Most cytotoxic above", "Least cytotoxic above", "Newest first", "Oldest first"], index=0, key="home_sorting")
 
     # ── Run search ────────────────────────────────────────────────────────────
     sort_by_year = home_sorting in ("Newest first", "Oldest first")
@@ -1015,6 +1394,9 @@ if page == "🔍  Search complexes":
                         query_smi, home_scaffold, home_metal, home_line, home_time
                     )
                 st.session_state["_last_search_key"] = _cache_key
+            if home_tissue != "All tissues":
+                tissue_lines = {l for l, o in _CELL_LINE_ORGAN.items() if o == home_tissue}
+                search_df = search_df[search_df["Cell_line"].isin(tissue_lines)]
             if home_ic50_min is not None:
                 search_df = search_df[search_df["IC50_Dark_value"] >= home_ic50_min]
             if home_ic50_max is not None:
@@ -1027,6 +1409,9 @@ if page == "🔍  Search complexes":
         search_df = df.copy()
         if home_metal != "All metals":
             search_df = search_df[search_df["Metal"] == home_metal]
+        if home_tissue != "All tissues":
+            tissue_lines = {l for l, o in _CELL_LINE_ORGAN.items() if o == home_tissue}
+            search_df = search_df[search_df["Cell_line"].isin(tissue_lines)]
         if home_line != "All cell lines":
             search_df = search_df[search_df["Cell_line"] == home_line]
         if home_time != "All time ranges":
@@ -1135,11 +1520,13 @@ elif page == "☀️  Phototoxicity":
         pt_tanimoto = 0.7
 
     # ── Filters ──────────────────────────────────────────────────────────────
-    col1f, col2f, col3f, col4f = st.columns(4)
+    col1f, col2f, col3f, col4f, col5f = st.columns(5)
     pt_metal   = col1f.selectbox("Metal",        ["All metals"] + metal_list, index=0, key="pt_metal")
-    pt_line    = col2f.selectbox("Cell line",    ["All cell lines"] + line_list, index=0, key="pt_line")
-    pt_pi_min  = col3f.selectbox("Min PI",       ["Any", "≥2", "≥5", "≥10", "≥50"], index=0, key="pt_pi_min")
-    pt_sorting = col4f.selectbox("Sorting",      ["Highest PI first", "Lowest IC₅₀(light) first"], index=0, key="pt_sorting")
+    pt_tissue  = col2f.selectbox("Tissue",       ["All tissues"] + _TISSUE_LIST, index=0, key="pt_tissue")
+    _pt_line_list = sorted([l for l, o in _CELL_LINE_ORGAN.items() if o == pt_tissue]) if pt_tissue != "All tissues" else line_list
+    pt_line    = col3f.selectbox("Cell line",    ["All cell lines"] + _pt_line_list, index=0, key="pt_line")
+    pt_pi_min  = col4f.selectbox("Min PI",       ["Any", "≥2", "≥5", "≥10", "≥50"], index=0, key="pt_pi_min")
+    pt_sorting = col5f.selectbox("Sorting",      ["Highest PI first", "Lowest IC₅₀(light) first"], index=0, key="pt_sorting")
     pt_time = "All time ranges"
 
     # ── Filter light_df ───────────────────────────────────────────────────────
@@ -1181,6 +1568,9 @@ elif page == "☀️  Phototoxicity":
                 )]
     if pt_metal != "All metals":
         fdf = fdf[fdf["Metal"] == pt_metal]
+    if pt_tissue != "All tissues":
+        pt_tissue_lines = {l for l, o in _CELL_LINE_ORGAN.items() if o == pt_tissue}
+        fdf = fdf[fdf["Cell_line"].isin(pt_tissue_lines)]
     if pt_line != "All cell lines":
         fdf = fdf[fdf["Cell_line"] == pt_line]
     if pt_time != "All time ranges":
@@ -1335,7 +1725,10 @@ elif page == "☀️  Phototoxicity":
                     td = "border-bottom:1px solid rgba(255,255,255,0.04);"
                     html += (
                         f"<tr>"
-                        f"<td style='font-family:DM Mono,monospace;font-size:0.75rem;color:#8892a4;padding:5px 8px 5px 0;{td}'>{dot}{row['Cell_line']}</td>"
+                        "<td style='font-family:DM Mono,monospace;font-size:0.75rem;color:#8892a4;padding:5px 8px 5px 0;" + td + "'>"
+                        + f"{dot}{row['Cell_line']}"
+                        + (f"<span style='font-family:DM Mono,monospace;font-size:0.6rem;color:#4a5568;margin-left:6px;'>{_CELL_LINE_ORGAN[row['Cell_line']]}</span>" if row['Cell_line'] in _CELL_LINE_ORGAN else "")
+                        + "</td>"
                         f"<td style='font-family:DM Mono,monospace;font-size:0.75rem;color:#8892a4;padding:5px 8px 5px 0;{td}'>{int(row['Time(h)'])}h</td>"
                         f"<td style='font-family:DM Mono,monospace;font-size:0.75rem;color:#8892a4;padding:5px 8px 5px 0;{td}'>{dark_val}</td>"
                         f"<td style='font-family:Syne,sans-serif;font-size:0.9rem;font-weight:700;color:{light_color};padding:5px 8px 5px 0;{td}'>{light_val}</td>"
@@ -1618,9 +2011,15 @@ elif page == "⚖️  Selectivity Index":
                     doi_short = str(row['DOI'])[:28] + ("…" if len(str(row['DOI'])) > 28 else "")
                     html += (
                         f"<tr>"
-                        f"<td style='font-family:DM Mono,monospace;font-size:0.75rem;color:#8892a4;padding:5px 8px 5px 0;{td}'>{row['Normal_line']}</td>"
+                        f"<td style='font-family:DM Mono,monospace;font-size:0.75rem;color:#8892a4;padding:5px 8px 5px 0;{td}'>"
+                        + row['Normal_line']
+                        + (f"<span style='font-family:DM Mono,monospace;font-size:0.6rem;color:#4a5568;margin-left:6px;'>{_CELL_LINE_ORGAN[row['Normal_line']]}</span>" if row['Normal_line'] in _CELL_LINE_ORGAN else "")
+                        + "</td>"
                         f"<td style='font-family:DM Mono,monospace;font-size:0.75rem;color:#8892a4;padding:5px 8px 5px 0;{td}'>{row['IC50_normal']}</td>"
-                        f"<td style='font-family:DM Mono,monospace;font-size:0.75rem;color:#8892a4;padding:5px 8px 5px 0;{td}'>{row['Cancer_line']}</td>"
+                        f"<td style='font-family:DM Mono,monospace;font-size:0.75rem;color:#8892a4;padding:5px 8px 5px 0;{td}'>"
+                        + row['Cancer_line']
+                        + (f"<span style='font-family:DM Mono,monospace;font-size:0.6rem;color:#4a5568;margin-left:6px;'>{_CELL_LINE_ORGAN[row['Cancer_line']]}</span>" if row['Cancer_line'] in _CELL_LINE_ORGAN else "")
+                        + "</td>"
                         f"<td style='font-family:DM Mono,monospace;font-size:0.75rem;color:#8892a4;padding:5px 8px 5px 0;{td}'>{row['IC50_cancer']}</td>"
                         f"<td style='font-family:DM Mono,monospace;font-size:0.8rem;font-weight:600;color:{si_c};padding:5px 8px 5px 0;{td}'>{si_val:.1f}</td>"
                         f"<td style='padding:5px 0 5px 8px;{td}'><a href='https://doi.org/{row["DOI"]}' target='_blank' style='font-family:DM Mono,monospace;font-size:0.68rem;color:#5b8fff;text-decoration:none;'>{doi_short}</a></td>"
