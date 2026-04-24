@@ -320,6 +320,7 @@ def show_search_results(search_df, ascending=True, sort_by_year=False, page_key=
             )
 
             # Top-3 rows always visible
+            group = group.sort_values('IC50_Dark_value', ascending=True)
             group_min_ic50 = group['IC50_Dark_value'].min()
             top3 = group.head(3)
             st.markdown(_render_lines_table(top3, metal_color, global_min_ic50=group_min_ic50), unsafe_allow_html=True)
@@ -355,7 +356,7 @@ if "visibility" not in st.session_state:
     st.session_state.disabled = False
 
 st.set_page_config(
-    page_title='MetalCytoToxDB',
+    page_title='OpenBioMetalDB',
     page_icon='🧪',
     layout='wide',
     initial_sidebar_state='expanded',
@@ -1056,6 +1057,13 @@ _NORMAL_LINES = {'HEK293', 'MRC-5', 'LO2', 'BEAS-2B', 'MCF-10A', 'NIH-3T3', 'HEK
                  'IMR-90', 'GES-1', 'NCM460', 'NP69', 'PBMCs', 'BHK-21', 'CCD-19Lu',
                  'HELF', 'W138', 'HMrSv5', 'PBMC-PHA', 'PBMC+PHA', 'FLS', 'DPSC', 'BMSC', 'C8-D1A'}
 
+# In vivo data (disabled)
+# try:
+#     iv_df = pd.read_csv('In_vivo.csv')
+# except FileNotFoundError:
+#     iv_df = pd.DataFrame()
+iv_df = pd.DataFrame()  # placeholder
+
 # Light toxicity subset
 light_df = df[df['IC50_Light(M*10^-6)'].notna()].copy()
 light_df['IC50_Light_value'] = pd.to_numeric(light_df['IC50_Light(M*10^-6)'], errors='coerce')
@@ -1072,16 +1080,26 @@ metal_total = metal_counts.sum()
 
 # ── Sidebar navigation ──────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("""
-    <div style="padding:8px 0 8px;">
-        <div style="font-family:'DM Mono',monospace;font-size:0.62rem;letter-spacing:0.2em;
-                    color:#3de8a0;text-transform:uppercase;margin-bottom:6px;">database</div>
-        <div style="font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:800;
-                    color:#e8ecf4;line-height:1.1;">
-            Metal<span style="color:#3de8a0;">Cyto</span>
+    try:
+        with open("logo.svg", "r") as _f:
+            _svg = _f.read()
+        import re as _re
+        _svg = _re.sub(r'<svg([^>]*?)>', lambda m: '<svg' + _re.sub(r'(width|height)="[^"]*"', '', m.group(1)) + ' width="140" height="140">', _svg, count=1)
+        st.markdown(
+            f'<div style="padding:4px 0 8px;">{_svg}</div>',
+            unsafe_allow_html=True
+        )
+    except Exception:
+        st.markdown("""
+        <div style="padding:8px 0 8px;">
+            <div style="font-family:'DM Mono',monospace;font-size:0.62rem;letter-spacing:0.2em;
+                        color:#3de8a0;text-transform:uppercase;margin-bottom:6px;">database</div>
+            <div style="font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:800;
+                        color:#e8ecf4;line-height:1.1;">
+                OpenBio<span style="color:#3de8a0;">Metal</span>DB
+            </div>
         </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
     _nav_options = [
         "🔍  Search complexes",
@@ -1089,6 +1107,7 @@ with st.sidebar:
         "☀️  Phototoxicity",
         "⚖️  Selectivity Index",
         "📊  Statistics",
+        "📋  What's New",
     ]
     _default_idx = 0
     if "_nav" in st.session_state and st.session_state["_nav"] in _nav_options:
@@ -1107,11 +1126,17 @@ with st.sidebar:
     st.markdown("""
     <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#4a5568;line-height:1.6;">
         <div style="color:#8892a4;margin-bottom:6px;">Cite this work:</div>
-        <div style="margin-bottom:8px;color:#4a5568;">Krasnov et al. <em>Machine Learning for Anticancer Activity Prediction of Transition Metal Complexes</em></div>
-        <a href="https://doi.org/10.26434/chemrxiv-2025-1nqvm-v2" target="_blank"
+        <div style="margin-bottom:8px;color:#4a5568;">Krasnov et al. <em>Machine Learning Approach to Anticancer Activity Prediction of Transition-Metal Complexes Based on a Large-Scale Experimental Database</em></div>
+        <a href="https://doi.org/10.1021/acs.jmedchem.5c02755" target="_blank"
            style="color:#5b8fff;text-decoration:none;word-break:break-all;">
-            ChemRxiv 2025 ↗
+            J. Med. Chem. 2026 ↗
         </a>
+        <div style="margin-top:12px;border-top:1px solid rgba(255,255,255,0.06);padding-top:10px;">
+            <a href="https://www.linkedin.com/company/openbiometaldb" target="_blank"
+               style="color:#5b8fff;text-decoration:none;">
+                LinkedIn ↗
+            </a>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -1217,7 +1242,7 @@ if page == "🔍  Search complexes":
             </div>
             <div style="font-family:'Syne',sans-serif;font-size:2.2rem;font-weight:800;
                         color:#e8ecf4;line-height:1.1;margin-bottom:12px;">
-                Metal<span style="color:#3de8a0;">Cyto</span>ToxDB
+                OpenBio<span style="color:#3de8a0;">Metal</span>DB
             </div>
             <div style="font-family:'DM Sans',sans-serif;font-size:0.9rem;color:#8892a4;
                         max-width:560px;line-height:1.7;">
@@ -1250,7 +1275,7 @@ if page == "🔍  Search complexes":
         """, unsafe_allow_html=True)
     with col_zenodo:
         st.markdown("""
-        <div style="display:flex;justify-content:flex-end;padding-top:8px;">
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;padding-top:8px;">
             <a href="https://doi.org/10.5281/zenodo.15853577" target="_blank"
                style="font-family:'DM Mono',monospace;font-size:0.7rem;font-weight:500;
                       letter-spacing:0.06em;color:#0a0d14;background:#3de8a0;
@@ -1258,6 +1283,10 @@ if page == "🔍  Search complexes":
                       white-space:nowrap;">
                 Zenodo ↗
             </a>
+            <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#3de8a0;
+                        white-space:nowrap;letter-spacing:0.04em;">
+                Last update: 24 Apr 2026
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -1359,7 +1388,7 @@ if page == "🔍  Search complexes":
     home_time     = col4f.selectbox("Exposure time",  ["All time ranges"] + time_list, index=0, key="home_time")
     home_ic50_min = col5f.number_input("IC₅₀ min, μM", min_value=0.0, step=1.0, value=None, placeholder="e.g. 0", format="%.4g", key="home_ic50_min")
     home_ic50_max = col6f.number_input("IC₅₀ max, μM", min_value=0.0, step=1.0, value=None, placeholder="e.g. 10", format="%.4g", key="home_ic50_max")
-    home_sorting  = col7f.selectbox("Sorting",        ["Most cytotoxic above", "Least cytotoxic above", "Newest first", "Oldest first"], index=0, key="home_sorting")
+    home_sorting  = col7f.selectbox("Sorting",        ["Most cytotoxic above", "Least cytotoxic above", "Newest first", "Oldest first"], index=2, key="home_sorting")
 
     # ── Run search ────────────────────────────────────────────────────────────
     sort_by_year = home_sorting in ("Newest first", "Oldest first")
@@ -2049,6 +2078,245 @@ elif page == "⚖️  Selectivity Index":
         if col_next.button("Next →", key="si_next", disabled=(page_si >= total_pages_si - 1), use_container_width=True):
             st.session_state['si_page'] += 1
             st.rerun()
+
+# elif page == "🐁  In Vivo":
+
+#     _MONO = "DM Mono, monospace"
+#     _SYNE = "Syne, sans-serif"
+#     _METAL_CLR_IV = {"Ru": "#3de8a0", "Ir": "#5b8fff", "Os": "#ff7c5b", "Rh": "#c084fc", "Re": "#fbbf24", "Au": "#f59e0b"}
+
+#     st.markdown("""
+#     <div style="margin-bottom:24px;">
+#         <div style="font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;
+#                     color:#e8ecf4;margin-bottom:8px;">In Vivo Data</div>
+#         <div style="font-family:'DM Sans',sans-serif;font-size:0.88rem;color:#8892a4;line-height:1.6;">
+#             Tumor growth inhibition (TGI) data for transition metal complexes in mouse models.
+#             TGI = (1 − V<sub>treated</sub>/V<sub>control</sub>) × 100%.
+#         </div>
+#     </div>
+#     """, unsafe_allow_html=True)
+
+#     if iv_df.empty:
+#         st.warning("In_vivo.csv not found. Please add the file to the app directory.")
+#     else:
+#         # ── Filters ──────────────────────────────────────────────────────────
+#         _has_pdt = 'PDT' in iv_df.columns
+#         iv_metals  = ["All metals"]  + sorted(iv_df['Metal'].dropna().unique().tolist())
+#         iv_models  = ["All models"]  + sorted(iv_df['Model'].dropna().unique().tolist())
+#         iv_context = ["All types"]   + sorted(iv_df['Treatment_context'].dropna().unique().tolist())
+#         iv_pdt_opts = ["Any", "PDT only", "No PDT"]
+
+#         col1f, col2f, col3f, col4f, col5f = st.columns(5)
+#         iv_metal   = col1f.selectbox("Metal",             iv_metals,   index=0, key="iv_metal")
+#         iv_model   = col2f.selectbox("Model",             iv_models,   index=0, key="iv_model")
+#         iv_tx      = col3f.selectbox("Treatment context", iv_context,  index=0, key="iv_tx")
+#         iv_pdt_f   = col4f.selectbox("PDT",               iv_pdt_opts, index=0, key="iv_pdt_f") if _has_pdt else "Any"
+#         iv_sorting = col5f.selectbox("Sorting", ["Highest TGI first", "Lowest TGI first"], index=0, key="iv_sorting")
+
+#         fiv = iv_df.copy()
+#         if iv_metal != "All metals": fiv = fiv[fiv['Metal'] == iv_metal]
+#         if iv_model != "All models": fiv = fiv[fiv['Model'] == iv_model]
+#         if iv_tx    != "All types":  fiv = fiv[fiv['Treatment_context'] == iv_tx]
+#         if _has_pdt:
+#             if iv_pdt_f == "PDT only": fiv = fiv[fiv['PDT'] == True]
+#             if iv_pdt_f == "No PDT":   fiv = fiv[fiv['PDT'] == False]
+
+#         # ── Summary bar ───────────────────────────────────────────────────────
+#         n_iv_cpx = fiv['Abbreviation_in_the_article'].nunique()
+#         n_iv_exp = len(fiv)
+#         n_iv_src = fiv['DOI'].nunique()
+#         col_iv_stats, col_iv_csv = st.columns([5, 1])
+#         with col_iv_stats:
+#             st.markdown(f"""
+#             <div style="display:flex;align-items:center;gap:24px;padding:16px 20px;
+#                         background:#0f1420;border:1px solid rgba(255,255,255,0.07);
+#                         border-radius:12px;margin-bottom:20px;">
+#                 <div>
+#                     <div style="font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:0.1em;
+#                                 text-transform:uppercase;color:#4a5568;margin-bottom:3px;">Complexes</div>
+#                     <div style="font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;
+#                                 color:#e8ecf4;">{n_iv_cpx}</div>
+#                 </div>
+#                 <div style="width:1px;height:36px;background:rgba(255,255,255,0.07);"></div>
+#                 <div>
+#                     <div style="font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:0.1em;
+#                                 text-transform:uppercase;color:#4a5568;margin-bottom:3px;">Experiments</div>
+#                     <div style="font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;
+#                                 color:#3de8a0;">{n_iv_exp}</div>
+#                 </div>
+#                 <div style="width:1px;height:36px;background:rgba(255,255,255,0.07);"></div>
+#                 <div>
+#                     <div style="font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:0.1em;
+#                                 text-transform:uppercase;color:#4a5568;margin-bottom:3px;">Sources</div>
+#                     <div style="font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;
+#                                 color:#e8ecf4;">{n_iv_src}</div>
+#                 </div>
+#             </div>
+#             """, unsafe_allow_html=True)
+#         with col_iv_csv:
+#             csv_iv = fiv.to_csv(index=False).encode('utf-8')
+#             st.markdown("<div style='height:20px;'></div>", unsafe_allow_html=True)
+#             st.download_button("Download CSV", data=csv_iv, file_name="in_vivo.csv", mime="text/csv", use_container_width=True)
+
+#         # ── Cards grouped by compound ─────────────────────────────────────────
+#         _iv_asc = iv_sorting == "Lowest TGI first"
+#         _iv_group_tgi = fiv.groupby(['Abbreviation_in_the_article', 'Metal'])['TGI_volume'].mean().sort_values(ascending=_iv_asc)
+#         group_keys_iv = _iv_group_tgi.index.tolist()
+#         grouped_iv = fiv.groupby(['Abbreviation_in_the_article', 'Metal'], sort=False)
+
+#         for (abbr, metal) in group_keys_iv:
+#             group = grouped_iv.get_group((abbr, metal))
+#             metal_color = _METAL_CLR_IV.get(str(metal), "#8892a4")
+#             smi = group['SMILES_Ligands'].dropna().iloc[0] if group['SMILES_Ligands'].notna().any() else None
+#             n_exp = len(group)
+
+#             col_img, col_data = st.columns([1, 4])
+#             with col_img:
+#                 if smi and Chem.MolFromSmiles(str(smi)):
+#                     st.image(draw_molecule(str(smi)), use_container_width=True)
+#                 else:
+#                     st.markdown(
+#                         "<div style='height:120px;display:flex;align-items:center;justify-content:center;"
+#                         "border:1px solid rgba(255,255,255,0.07);border-radius:8px;"
+#                         "font-family:DM Mono,monospace;font-size:0.65rem;color:#4a5568;'>No structure</div>",
+#                         unsafe_allow_html=True
+#                     )
+#             with col_data:
+#                 pdt_badge = "<span style='font-family:DM Mono,monospace;font-size:0.6rem;padding:2px 6px;border-radius:4px;background:#fbbf2418;color:#fbbf24;margin-left:8px;'>PDT</span>" if group['PDT'].any() else ""
+#                 st.markdown(
+#                     f"<div style='display:flex;align-items:center;gap:12px;margin-bottom:4px;flex-wrap:wrap;'>"
+#                     f"<span style='font-family:{_MONO};font-size:0.75rem;font-weight:600;"
+#                     f"padding:3px 8px;border-radius:4px;background:{metal_color}18;color:{metal_color};'>{metal}</span>"
+#                     f"<span style='font-family:{_SYNE};font-size:1.1rem;font-weight:800;color:#e8ecf4;'>{abbr}</span>"
+#                     f"{pdt_badge}"
+#                     f"<span style='font-family:{_MONO};font-size:0.65rem;color:#4a5568;'>{n_exp} experiment{'s' if n_exp > 1 else ''}</span>"
+#                     f"</div>",
+#                     unsafe_allow_html=True
+#                 )
+
+#                 # Table
+#                 td = "border-bottom:1px solid rgba(255,255,255,0.04);"
+#                 th = "font-family:DM Mono,monospace;font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;color:#4a5568;text-align:left;padding:4px 8px 4px 0;border-bottom:1px solid rgba(255,255,255,0.06);"
+#                 table_html = (
+#                     f"<table style='width:100%;border-collapse:collapse;margin-top:6px;'>"
+#                     f"<thead><tr>"
+#                     f"<th style='{th}'>Model</th>"
+#                     f"<th style='{th}'>Cell line</th>"
+#                     f"<th style='{th}'>Dose, mg/kg</th>"
+#                     f"<th style='{th}'>Schedule</th>"
+#                     f"<th style='{th}'>Timepoint, days</th>"
+#                     f"<th style='{th}'>TGI vol, %</th>"
+#                     f"<th style='{th}'>TGI wt, %</th>"
+#                     f"<th style='{th}'>Ref drug</th>"
+#                     f"<th style='{th}'>Ref TGI vol, %</th>"
+#                     f"<th style='{th}'>Safety</th>"
+#                     f"<th style='{th}'>DOI</th>"
+#                     f"</tr></thead><tbody>"
+#                 )
+
+#                 def _tgi_color(val):
+#                     if pd.isna(val): return "#8892a4"
+#                     if val >= 60: return "#3de8a0"
+#                     if val >= 40: return "#fbbf24"
+#                     return "#8892a4"
+
+#                 def render_iv_rows(rows):
+#                     html = ""
+#                     for _, row in rows.iterrows():
+#                         tgi_v = row['TGI_volume']
+#                         tgi_w = row['TGI_weight']
+#                         ref_tgi_v = row['reference_TGI_volume']
+#                         ref_drug = str(row['reference_drug']) if pd.notna(row['reference_drug']) else "—"
+#                         deaths = str(row['drug_related_deaths']) if pd.notna(row['drug_related_deaths']) else ""
+#                         wl = row['max_weight_loss_pct']
+#                         safety_parts = []
+#                         if deaths: safety_parts.append(f"deaths {deaths}")
+#                         if pd.notna(wl) and wl > 0: safety_parts.append(f"BW −{wl}%")
+#                         safety_str = "; ".join(safety_parts) if safety_parts else "—"
+#                         doi_s = str(row['DOI'])[:22] + "…" if len(str(row['DOI'])) > 22 else str(row['DOI'])
+#                         html += (
+#                             f"<tr>"
+#                             f"<td style='font-family:DM Mono,monospace;font-size:0.72rem;color:#8892a4;padding:5px 8px 5px 0;{td}'>{row['Model']}</td>"
+#                             f"<td style='font-family:DM Mono,monospace;font-size:0.72rem;color:#8892a4;padding:5px 8px 5px 0;{td}'>{row['Cell_line_inoculated']}</td>"
+#                             f"<td style='font-family:DM Mono,monospace;font-size:0.72rem;color:#8892a4;padding:5px 8px 5px 0;{td}'>{row['Dose_mg_kg']}</td>"
+#                             f"<td style='font-family:DM Mono,monospace;font-size:0.72rem;color:#8892a4;padding:5px 8px 5px 0;{td}'>{str(row['schedule']) if pd.notna(row['schedule']) else '—'}</td>"
+#                             f"<td style='font-family:DM Mono,monospace;font-size:0.72rem;color:#8892a4;padding:5px 8px 5px 0;{td}'>{str(int(row['Timepoint_days'])) if pd.notna(row['Timepoint_days']) else '—'}</td>"
+#                             f"<td style='font-family:DM Mono,monospace;font-size:0.8rem;font-weight:700;color:{_tgi_color(tgi_v)};padding:5px 8px 5px 0;{td}'>{f'{tgi_v:.1f}' if pd.notna(tgi_v) else '—'}</td>"
+#                             f"<td style='font-family:DM Mono,monospace;font-size:0.8rem;font-weight:700;color:{_tgi_color(tgi_w)};padding:5px 8px 5px 0;{td}'>{f'{tgi_w:.1f}' if pd.notna(tgi_w) else '—'}</td>"
+#                             f"<td style='font-family:DM Mono,monospace;font-size:0.72rem;color:#8892a4;padding:5px 8px 5px 0;{td}'>{ref_drug}</td>"
+#                             f"<td style='font-family:DM Mono,monospace;font-size:0.72rem;color:#8892a4;padding:5px 8px 5px 0;{td}'>{f'{ref_tgi_v:.1f}' if pd.notna(ref_tgi_v) else '—'}</td>"
+#                             f"<td style='font-family:DM Mono,monospace;font-size:0.72rem;color:#8892a4;padding:5px 8px 5px 0;{td}'>{safety_str}</td>"
+#                             f"<td style='padding:5px 0;{td}'><a href='https://doi.org/{row["DOI"]}' target='_blank' style='font-family:DM Mono,monospace;font-size:0.65rem;color:#5b8fff;text-decoration:none;'>{doi_s}</a></td>"
+#                             f"</tr>"
+#                         )
+#                     return html
+
+#                 top3 = group.head(3)
+#                 rest = group.iloc[3:]
+#                 st.markdown(table_html + render_iv_rows(top3) + "</tbody></table>", unsafe_allow_html=True)
+#                 if len(rest) > 0:
+#                     with st.expander(f"Show {len(rest)} more"):
+#                         st.markdown("<table style='width:100%;border-collapse:collapse;'><tbody>" + render_iv_rows(rest) + "</tbody></table>", unsafe_allow_html=True)
+
+#             st.markdown("<div style='height:1px;background:rgba(255,255,255,0.06);margin:8px 0;'></div>", unsafe_allow_html=True)
+
+
+elif page == "📋  What's New":
+
+    st.markdown("""
+    <div style="margin-bottom:32px;">
+        <div style="font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;
+                    color:#e8ecf4;margin-bottom:8px;">What's New</div>
+        <div style="font-family:'DM Sans',sans-serif;font-size:0.88rem;color:#8892a4;">
+            Updates, new data, and improvements to OpenBioMetalDB.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    _CHANGELOG = [
+        {
+            "date": "24 Apr 2026",
+            "entries": [
+                ("data", "666 new IC₅₀ values from recent 2025–2026 literature for Ir(III) complexes"),
+            ]
+        },
+        {
+            "date": "13 Apr 2026",
+            "entries": [
+                ("feature", "OpenBioMetalDB is now published in <a href='https://pubs.acs.org/doi/10.1021/acs.jmedchem.5c02755' target='_blank' style='color:#5b8fff;text-decoration:none;'>Journal of Medicinal Chemistry</a> — <em>Machine Learning Approach to Anticancer Activity Prediction of Transition-Metal Complexes Based on a Large-Scale Experimental Database</em>"),
+            ]
+        },
+    ]
+
+    _TAG_CLR = {
+        "data":    ("#3de8a0", "#3de8a01a"),
+        "feature": ("#5b8fff", "#5b8fff1a"),
+        "fix":     ("#fbbf24", "#fbbf241a"),
+        "ui":      ("#c084fc", "#c084fc1a"),
+    }
+
+    for release in _CHANGELOG:
+        st.markdown(
+            f"<div style='font-family:DM Mono,monospace;font-size:0.75rem;font-weight:600;"
+            f"color:#4a5568;letter-spacing:0.08em;text-transform:uppercase;"
+            f"margin-bottom:12px;margin-top:8px;'>{release['date']}</div>",
+            unsafe_allow_html=True
+        )
+        for tag, text in release["entries"]:
+            clr, bg = _TAG_CLR.get(tag, ("#8892a4", "#8892a41a"))
+            st.markdown(
+                f"<div style='display:flex;align-items:flex-start;gap:12px;padding:12px 16px;"
+                f"background:#0f1420;border:1px solid rgba(255,255,255,0.06);border-radius:10px;"
+                f"margin-bottom:8px;'>"
+                f"<span style='font-family:DM Mono,monospace;font-size:0.6rem;font-weight:700;"
+                f"letter-spacing:0.1em;text-transform:uppercase;color:{clr};background:{bg};"
+                f"padding:3px 8px;border-radius:4px;white-space:nowrap;margin-top:1px;'>{tag}</span>"
+                f"<span style='font-family:DM Sans,sans-serif;font-size:0.88rem;color:#8892a4;"
+                f"line-height:1.5;'>{text}</span>"
+                f"</div>",
+                unsafe_allow_html=True
+            )
+        st.markdown("<div style='height:1px;background:rgba(255,255,255,0.06);margin:16px 0 20px;'></div>", unsafe_allow_html=True)
 
 elif page == "📊  Statistics":
 
