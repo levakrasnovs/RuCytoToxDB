@@ -6,6 +6,8 @@
 [![Streamlit](https://img.shields.io/badge/Live-biometaldb.streamlit.app-3de8a0)](https://biometaldb.streamlit.app/)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-OpenBioMetalDB-0077B5)](https://www.linkedin.com/company/openbiometaldb)
 
+Download OpenBioMetalDB: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20153879.svg)](https://doi.org/10.5281/zenodo.20153879).
+
 OpenBioMetalDB is an open-access database of IC₅₀ cytotoxicity values for transition metal complexes, curated from peer-reviewed literature. The database covers Ru, Ir, Os, Rh, Re, Au and other metals, and is designed to support medicinal chemistry research, structure–activity relationship (SAR) analysis, and machine learning model development.
 
 ---

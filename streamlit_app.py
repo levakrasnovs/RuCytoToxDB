@@ -1276,7 +1276,7 @@ if page == "🔍  Search complexes":
     with col_zenodo:
         st.markdown("""
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;padding-top:8px;">
-            <a href="https://doi.org/10.5281/zenodo.15853577" target="_blank"
+            <a href="https://doi.org/10.5281/zenodo.20153879" target="_blank"
                style="font-family:'DM Mono',monospace;font-size:0.7rem;font-weight:500;
                       letter-spacing:0.06em;color:#0a0d14;background:#3de8a0;
                       text-decoration:none;padding:8px 14px;border-radius:8px;
@@ -2277,7 +2277,7 @@ elif page == "📋  What's New":
         {
             "date": "23 May 2026",
             "entries": [
-                ("data", "8442 new IC₅₀ values from 1998–2026 literature for Au(I) and Au(III) complexes, covering 2 220 unique complexes."),
+                ("data", "8442 new IC₅₀ values from 1998–2026 literature for Au(I) and Au(III) complexes, covering 2220 unique complexes."),
             ]
         },
         {
