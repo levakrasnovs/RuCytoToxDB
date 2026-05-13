@@ -1285,7 +1285,7 @@ if page == "🔍  Search complexes":
             </a>
             <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#3de8a0;
                         white-space:nowrap;letter-spacing:0.04em;">
-                Last update: 24 Apr 2026
+                Last update: 13 May 2026
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -2274,6 +2274,12 @@ elif page == "📋  What's New":
     """, unsafe_allow_html=True)
 
     _CHANGELOG = [
+        {
+            "date": "23 May 2026",
+            "entries": [
+                ("data", "8442 new IC₅₀ values from 1998–2026 literature for Au(I) and Au(III) complexes, covering 2 220 unique complexes."),
+            ]
+        },
         {
             "date": "24 Apr 2026",
             "entries": [
