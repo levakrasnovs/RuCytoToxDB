@@ -41,6 +41,13 @@ def draw_molecule(smiles, size=(300, 300)):
 def canonize_smiles(smiles):
     return Chem.MolToSmiles(Chem.MolFromSmiles(smiles))
 
+def has_all_substructures(smiles_ligands, query_mols):
+    """True if every query fragment is a substructure of at least one ligand
+    (the same rule as the substructure search on the main page)."""
+    parts = [Chem.MolFromSmiles(s) for s in str(smiles_ligands).split(".")]
+    parts = [p for p in parts if p is not None]
+    return all(any(p.HasSubstructMatch(q) for p in parts) for q in query_mols)
+
 def _render_lines_table(rows_df, metal_color, global_min_ic50=None):
     """Render cell line rows as an HTML table inside a compound card."""
     _MONO = "DM Mono, monospace"
@@ -1105,6 +1112,7 @@ with st.sidebar:
         "🔍  Search complexes",
         "📚  Literature",
         "☀️  Phototoxicity",
+        "💧  Lipophilicity",
         "⚖️  Selectivity Index",
         "📊  Statistics",
         "📋  What's New",
@@ -1776,6 +1784,298 @@ elif page == "☀️  Phototoxicity":
                     st.markdown("<table style='width:100%;border-collapse:collapse;'><tbody>" + render_pt_rows(rest) + "</tbody></table>", unsafe_allow_html=True)
 
         st.markdown("<div style='height:1px;background:rgba(255,255,255,0.06);margin:8px 0;'></div>", unsafe_allow_html=True)
+
+elif page == "💧  Lipophilicity":
+
+    _MONO = "DM Mono, monospace"
+    _SYNE = "Syne, sans-serif"
+    _LP_CLR = {"Ru": "#3de8a0", "Ir": "#5b8fff", "Pt": "#e8ecf4", "Au": "#fbbf24", "Cu": "#ff7c5b",
+               "Fe": "#f87171", "Tc": "#a78bfa", "Rh": "#c084fc", "Re": "#facc15", "Os": "#fb923c"}
+    _LP_PAGE = 20
+    _LP_TH = ("font-family:DM Mono,monospace;font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;"
+              "color:#4a5568;text-align:left;padding:4px 8px 4px 0;border-bottom:1px solid rgba(255,255,255,0.06);")
+    _LP_TD = "font-family:DM Mono,monospace;font-size:0.75rem;color:#8892a4;padding:5px 8px 5px 0;border-bottom:1px solid rgba(255,255,255,0.04);"
+
+    @st.cache_data
+    def _load_lipo():
+        d = pd.read_csv('MetalLipoDB.csv')
+        d['value'] = pd.to_numeric(d['value'], errors='coerce')
+        # ligand SMILES for the search; multinuclear complexes have none, so their complex SMILES is used
+        d['_search_smiles'] = d['smiles_ligands'].fillna(d['smiles_complex'])
+        return d
+
+    @st.cache_resource
+    def _lipo_images():
+        """Structures pre-rendered with metal2d ({smiles_complex: PNG bytes}); empty if the file is missing."""
+        import os, pickle
+        if not os.path.exists('lipo_structures.pkl'):
+            return {}
+        with open('lipo_structures.pkl', 'rb') as f:
+            return pickle.load(f)
+
+    @st.cache_data
+    def _draw_complex(smiles, size=(300, 300)):
+        """Pre-rendered image if available; otherwise the complex (stored with dative bonds) is parsed
+        without sanitisation and laid out with metal2d, with plain RDKit as the fallback."""
+        if smiles in _lipo_images():
+            return _lipo_images()[smiles]
+        mol = Chem.MolFromSmiles(smiles, sanitize=False)
+        if mol is None:
+            return None
+        mol.UpdatePropertyCache(strict=False)
+        try:
+            import metal2d
+            from rdkit.Chem.Draw import rdMolDraw2D
+            p = metal2d.prepare_for_drawing(metal2d.depict(mol))
+            d2d = rdMolDraw2D.MolDraw2DCairo(*size)
+            metal2d.style_options(d2d.drawOptions())
+            d2d.drawOptions().padding = 0.05
+            d2d.DrawMolecule(rdMolDraw2D.PrepareMolForDrawing(p, kekulize=False, wedgeBonds=False))
+            d2d.FinishDrawing()
+            return d2d.GetDrawingText()
+        except Exception:
+            return Chem.Draw.MolToImage(mol, size=size)
+
+    def _lp_has_substructures(smiles, query_mols):
+        mol = Chem.MolFromSmiles(smiles, sanitize=False)
+        if mol is None:
+            return False
+        mol.UpdatePropertyCache(strict=False)
+        return all(mol.HasSubstructMatch(q) for q in query_mols)
+
+    lp_df = _load_lipo()
+
+    st.markdown("""
+    <div style="margin-bottom:24px;">
+        <div style="font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;
+                    color:#e8ecf4;margin-bottom:8px;">Lipophilicity</div>
+        <div style="font-family:'DM Sans',sans-serif;font-size:0.88rem;color:#8892a4;line-height:1.6;">
+            Experimental octanol&ndash;water logP / logD values of metal complexes (MetalLipoDB), measured by the shake-flask method
+            and reported as designated by the authors, with the aqueous phase, counterion and detection technique.
+            Dataset: <a href="https://doi.org/10.5281/zenodo.23084573" target="_blank" style="color:#5b8fff;text-decoration:none;">Zenodo ↗</a>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── Metal distribution bars (top metals) ─────────────────────────────────
+    lp_counts = lp_df['metal'].value_counts()
+    lp_top = lp_counts.head(10)
+    lp_top = pd.concat([lp_top, pd.Series({'other': lp_counts.iloc[10:].sum()})]) if len(lp_counts) > 10 else lp_top
+    render_metal_bars(lp_top, lp_counts.sum(), _LP_CLR)
+
+    # ── Search bar ───────────────────────────────────────────────────────────
+    # The text field owns its value (key "lp_smiles_input"). Examples, clear and the
+    # editor write to "_lp_pending", which is applied before the field is rendered.
+    _LP_EXAMPLES = [
+        ("p-cymene · Cl⁻", "Cc1ccc(C(C)C)cc1.[Cl-]"),
+        ("bpy", "c1ccc(-c2ccccn2)nc1"),
+        ("phen", "c1cnc2c(c1)ccc1cccnc12"),
+        ("ppy", "[c-]1ccccc1-c1ccccn1"),
+        ("dip", "c1ccc(-c2ccnc3c2ccc2c(-c4ccccc4)ccnc23)cc1"),
+        ("Cp*", "Cc1c(C)c(C)[c-](C)c1C"),
+        ("PPh3", "c1ccc(P(c2ccccc2)c2ccccc2)cc1"),
+        ("PTA", "C1N2CN3CN1CP(C2)C3"),
+    ]
+
+    def _lp_set_query(smi):
+        st.session_state["_lp_pending"] = smi
+        st.session_state["lp_page"] = 0
+
+    if "_lp_pending" in st.session_state:
+        st.session_state["lp_smiles_input"] = st.session_state.pop("_lp_pending")
+    st.session_state.setdefault("lp_smiles_input", "")
+
+    @st.dialog("Draw a structure", width="large")
+    def _lp_draw_dialog():
+        drawn = st_ketcher(height=480, key="ketcher_lipo")
+        if drawn:
+            _lp_set_query(drawn)
+            st.markdown('<div style="font-family:DM Mono,monospace;font-size:0.62rem;letter-spacing:0.08em;text-transform:uppercase;color:#6c757d;margin-top:4px;margin-bottom:2px;">Your SMILES — click Apply then close</div>', unsafe_allow_html=True)
+            st.code(drawn, language=None)
+
+    col_search, col_clear, col_draw, col_search_btn = st.columns([5, 0.4, 1, 1])
+    with col_search:
+        st.text_input(label="", placeholder='SMILES for ligand — use "." to combine multiple ligands',
+                      label_visibility="collapsed", key="lp_smiles_input")
+    with col_clear:
+        st.button("✕", key="lp_clear", use_container_width=True, on_click=_lp_set_query, args=("",))
+    with col_draw:
+        if st.button("✏ Draw", key="lp_draw", use_container_width=True):
+            _lp_draw_dialog()
+    with col_search_btn:
+        st.button("🔍 Search", key="lp_search_btn", use_container_width=True, type="primary")
+
+    st.markdown('<span style="font-family:DM Mono,monospace;font-size:0.65rem;color:#4a5568;">Try search with popular ligands:</span>', unsafe_allow_html=True)
+    lp_ex_cols = st.columns(len(_LP_EXAMPLES))
+    for i, (label, smi) in enumerate(_LP_EXAMPLES):
+        with lp_ex_cols[i]:
+            st.button(label, key=f"lp_ex_{i}", use_container_width=True, on_click=_lp_set_query, args=(smi,))
+
+    lp_mode = st.radio("", ["Full molecule match", "Substructure search"], index=0, horizontal=True,
+                       key="lp_mode", label_visibility="collapsed")
+
+    # ── Filters ──────────────────────────────────────────────────────────────
+    col1f, col2f, col3f, col5f, col6f, col7f, col4f = st.columns(7)
+    lp_metal = col1f.selectbox("Metal", ["All metals"] + lp_counts.index.tolist(), index=0, key="lp_metal")
+    lp_medium = col2f.selectbox("Aqueous phase", ["All"] + sorted(lp_df['medium_class'].dropna().unique().tolist()),
+                                index=0, key="lp_medium")
+    lp_nuc = col3f.selectbox("Nuclearity", ["All complexes", "Mononuclear", "Multinuclear"], index=0, key="lp_nuc")
+    lp_charge = col5f.selectbox("Charge", ["All", "Cationic", "Neutral", "Anionic"], index=0, key="lp_charge")
+    lp_sorting = col4f.selectbox("Sorting", ["Newest first", "Oldest first"], index=0, key="lp_sorting")
+    lp_vmin = col6f.number_input("log P min", step=0.5, value=None, placeholder="e.g. 0", format="%.4g", key="lp_vmin")
+    lp_vmax = col7f.number_input("log P max", step=0.5, value=None, placeholder="e.g. 2", format="%.4g", key="lp_vmax")
+
+    # ── Filter ───────────────────────────────────────────────────────────────
+    fdf = lp_df
+    lp_query = st.session_state.get("lp_smiles_input", "").strip()
+    if lp_query:
+        if Chem.MolFromSmiles(lp_query) is None:
+            st.error("Invalid SMILES — please check your input.")
+            fdf = fdf.iloc[0:0]
+        elif lp_mode == "Full molecule match":
+            lp_inputs = [canonize_smiles(s) for s in lp_query.split(".") if s]
+            fdf = fdf[fdf['_search_smiles'].apply(lambda x: all(s in str(x).split(".") for s in lp_inputs))]
+        else:
+            lp_qmols = [m for m in (Chem.MolFromSmiles(s) for s in lp_query.split(".") if s) if m is not None]
+            fdf = fdf[fdf['_search_smiles'].apply(lambda x: _lp_has_substructures(str(x), lp_qmols))]
+    if lp_metal != "All metals":
+        fdf = fdf[fdf['metal'] == lp_metal]
+    if lp_medium != "All":
+        fdf = fdf[fdf['medium_class'] == lp_medium]
+    if lp_nuc != "All complexes":
+        _is_multi = fdf['multinuclear'].astype(str).str.upper().eq("YES")
+        fdf = fdf[_is_multi] if lp_nuc == "Multinuclear" else fdf[~_is_multi]
+    if lp_charge != "All":
+        _q = pd.to_numeric(fdf['complex_charge'], errors='coerce')
+        fdf = fdf[{"Cationic": _q > 0, "Neutral": _q == 0, "Anionic": _q < 0}[lp_charge]]
+    if lp_vmin is not None:
+        fdf = fdf[fdf['value'] >= lp_vmin]
+    if lp_vmax is not None:
+        fdf = fdf[fdf['value'] <= lp_vmax]
+
+    # ── Group: one card per complex and counterion ───────────────────────────
+    fdf = fdf.assign(_ci=fdf['counterion'].fillna(''))
+    agg = fdf.groupby(['smiles_complex', '_ci'], sort=False).agg(y=('year', 'max'))
+    agg = agg.sort_values('y', ascending=(lp_sorting == "Oldest first"), kind="stable")
+    lp_keys = agg.index.tolist()
+
+    # ── Summary ──────────────────────────────────────────────────────────────
+    n_lp_cpx, n_lp_val, n_lp_src = len(lp_keys), len(fdf), fdf['doi'].nunique()
+    lp_pages = max(1, (n_lp_cpx + _LP_PAGE - 1) // _LP_PAGE)
+    if st.session_state.get("lp_page", 0) >= lp_pages:
+        st.session_state["lp_page"] = 0
+    lp_page = st.session_state.get("lp_page", 0)
+    col_stats, col_csv = st.columns([5, 1])
+    with col_stats:
+        _lp_showing = (
+            f"<div style='margin-left:auto;text-align:right;'>"
+            f"<div style='font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;color:#4a5568;margin-bottom:3px;'>Showing</div>"
+            f"<div style='font-family:DM Mono,monospace;font-size:0.85rem;font-weight:500;color:#8892a4;'>"
+            f"{lp_page * _LP_PAGE + 1}–{min((lp_page + 1) * _LP_PAGE, n_lp_cpx)} of {n_lp_cpx}</div></div>"
+        ) if n_lp_cpx > _LP_PAGE else ""
+        _box = lambda label, val, clr: (
+            f"<div><div style='font-family:DM Mono,monospace;font-size:0.65rem;letter-spacing:0.1em;"
+            f"text-transform:uppercase;color:#4a5568;margin-bottom:3px;'>{label}</div>"
+            f"<div style='font-family:Syne,sans-serif;font-size:1.5rem;font-weight:800;color:{clr};'>{val}</div></div>")
+        _sep = "<div style='width:1px;height:36px;background:rgba(255,255,255,0.07);'></div>"
+        st.markdown(
+            "<div style='display:flex;align-items:center;gap:24px;padding:16px 20px;background:#0f1420;"
+            "border:1px solid rgba(255,255,255,0.07);border-radius:12px;margin-bottom:20px;'>"
+            + _box("Complexes", n_lp_cpx, "#e8ecf4") + _sep + _box("logP / logD values", n_lp_val, "#3de8a0")
+            + _sep + _box("Sources", n_lp_src, "#e8ecf4") + _lp_showing + "</div>", unsafe_allow_html=True)
+    with col_csv:
+        st.markdown("<div style='height:20px;'></div>", unsafe_allow_html=True)
+        st.download_button("Download CSV", data=fdf.drop(columns=['_search_smiles', '_ci']).to_csv(index=False).encode('utf-8'),
+                           file_name="lipophilicity.csv", mime="text/csv", use_container_width=True)
+
+    # ── Cards ────────────────────────────────────────────────────────────────
+    grouped = fdf.groupby(['smiles_complex', '_ci'], sort=False)
+    _txt = lambda x: "—" if pd.isna(x) or str(x).strip() == "" else str(x)
+    for key in lp_keys[lp_page * _LP_PAGE:(lp_page + 1) * _LP_PAGE]:
+        smi, ci = key
+        group = grouped.get_group(key).sort_values('value', ascending=False)
+        metal = str(group['metal'].iloc[0])
+        metal_color = _LP_CLR.get(metal.split('-')[0], "#8892a4")
+        abbr = _txt(group['abbreviation_in_the_article'].iloc[0])
+        charge = group['complex_charge'].iloc[0]
+        charge_str = "" if pd.isna(charge) else (f"{int(charge):+d}" if int(charge) else "neutral")
+        vmax = group['value'].max()
+        multi = " · multinuclear" if str(group['multinuclear'].iloc[0]).upper() == "YES" else ""
+
+        col_img, col_data = st.columns([1, 4])
+        with col_img:
+            img = _draw_complex(smi)
+            if img is not None:
+                st.image(img, use_container_width=True)
+        with col_data:
+            st.markdown(
+                f"<div style='display:flex;align-items:center;gap:12px;margin-bottom:4px;flex-wrap:wrap;'>"
+                f"<span style='font-family:{_MONO};font-size:0.75rem;font-weight:600;padding:3px 8px;border-radius:4px;"
+                f"background:{metal_color}18;color:{metal_color};'>{metal}</span>"
+                f"<span style='font-family:{_SYNE};font-size:1.2rem;font-weight:800;color:#e8ecf4;'>{vmax:.2f}</span>"
+                f"<span style='font-family:{_MONO};font-size:0.65rem;color:#4a5568;'>· {len(group)} value{'s' if len(group) > 1 else ''}"
+                f"{' · charge ' + charge_str if charge_str else ''}{multi}</span></div>"
+                + (f"<div style='margin-bottom:3px;'><span style='font-family:{_MONO};font-size:0.6rem;color:#4a5568;margin-right:2px;'>Name from article:</span>"
+                   f"<span style='font-family:{_SYNE};font-size:1rem;font-weight:700;color:#e8ecf4;'>{abbr}</span></div>" if abbr != "—" else "")
+                + (f"<div style='font-family:{_MONO};font-size:0.65rem;color:#4a5568;margin-bottom:2px;'>Counterion: {ci}</div>" if ci else "")
+                + f"<div style='font-family:{_MONO};font-size:0.65rem;color:#4a5568;word-break:break-all;margin-bottom:4px;'>{smi}</div>",
+                unsafe_allow_html=True)
+
+            head = ("<table style='width:100%;border-collapse:collapse;margin-top:6px;'><thead><tr>"
+                    + "".join(f"<th style='{_LP_TH}'>{h}</th>" for h in
+                              ["Value", "SD", "Aqueous phase", "pH", "Detection", "DOI", "Year"])
+                    + "</tr></thead><tbody>")
+
+            def _lp_rows(rows):
+                html = ""
+                for _, r in rows.iterrows():
+                    rel = "" if r['value_relation'] in ("=", "~") else str(r['value_relation'])
+                    doi_v = str(r['doi'])
+                    doi_short = doi_v[:28] + ("…" if len(doi_v) > 28 else "")
+                    year = "—" if pd.isna(r['year']) else int(r['year'])
+                    html += (
+                        "<tr>"
+                        f"<td style='font-family:Syne,sans-serif;font-size:0.9rem;font-weight:700;color:#e8ecf4;padding:5px 8px 5px 0;border-bottom:1px solid rgba(255,255,255,0.04);'>{rel}{r['value']:.2f}</td>"
+                        f"<td style='{_LP_TD}'>{_txt(r['std'])}</td>"
+                        f"<td style='{_LP_TD}'>{_txt(r['aqueous_phase'])}</td>"
+                        f"<td style='{_LP_TD}'>{_txt(r['pH'])}</td>"
+                        f"<td style='{_LP_TD}'>{_txt(r['detection'])}</td>"
+                        f"<td style='padding:5px 8px 5px 0;border-bottom:1px solid rgba(255,255,255,0.04);'><a href='https://doi.org/{doi_v}' target='_blank' "
+                        f"style='font-family:DM Mono,monospace;font-size:0.68rem;color:#5b8fff;text-decoration:none;'>{doi_short}</a></td>"
+                        f"<td style='{_LP_TD}'>{year}</td>"
+                        "</tr>")
+                return html
+
+            st.markdown(head + _lp_rows(group.head(3)) + "</tbody></table>", unsafe_allow_html=True)
+            if len(group) > 3:
+                with st.expander(f"Show {len(group) - 3} more"):
+                    st.markdown("<table style='width:100%;border-collapse:collapse;'><tbody>" + _lp_rows(group.iloc[3:])
+                                + "</tbody></table>", unsafe_allow_html=True)
+            # method descriptions: one paragraph per article, collapsed
+            _meth = (group.dropna(subset=['method_description'])
+                     .drop_duplicates('doi')[['doi', 'method_description']])
+            _meth = _meth[_meth['method_description'].astype(str).str.strip() != ""]
+            if len(_meth):
+                with st.expander("Method description"):
+                    import html as _html
+                    st.markdown("".join(
+                        f"<div style='margin-bottom:10px;'>"
+                        f"<div style='font-family:DM Mono,monospace;font-size:0.62rem;color:#5b8fff;margin-bottom:3px;'>{_html.escape(str(m.doi))}</div>"
+                        f"<div style='font-family:DM Sans,sans-serif;font-size:0.8rem;color:#8892a4;line-height:1.55;'>{_html.escape(str(m.method_description))}</div>"
+                        f"</div>" for m in _meth.itertuples()), unsafe_allow_html=True)
+        st.markdown("<div style='height:1px;background:rgba(255,255,255,0.06);margin:8px 0;'></div>", unsafe_allow_html=True)
+
+    # ── Pagination ───────────────────────────────────────────────────────────
+    if lp_pages > 1:
+        col_prev, col_mid, col_next = st.columns([1, 2, 1])
+        if col_prev.button("← Previous", key="lp_prev", disabled=(lp_page == 0), use_container_width=True):
+            st.session_state["lp_page"] = lp_page - 1
+            st.rerun()
+        col_mid.markdown(f'<div style="text-align:center;font-family:DM Mono,monospace;font-size:0.8rem;color:#8892a4;padding-top:8px;">'
+                         f'Page {lp_page + 1} of {lp_pages}</div>', unsafe_allow_html=True)
+        if col_next.button("Next →", key="lp_next", disabled=(lp_page >= lp_pages - 1), use_container_width=True):
+            st.session_state["lp_page"] = lp_page + 1
+            st.rerun()
 
 elif page == "⚖️  Selectivity Index":
 

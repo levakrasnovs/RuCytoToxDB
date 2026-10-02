@@ -4,3 +4,4 @@ plotly
 scikit-learn==1.5.2
 rdkit
 molfeat==0.10.0
+metal2d
